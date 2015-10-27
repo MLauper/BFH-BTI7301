@@ -1,0 +1,29 @@
+;;;; Basic syntax
+;;; defun is a makro
+(defun name (parameter*)
+  "Optional documentation string."
+  body-form*)
+
+;;; Function naming conventsions
+string->widget		   ; It's common to use -> for conversions
+frob-widget    ; Use dashes, not underscores or inner caps
+NOT frob_widget
+NOT frobWidget
+
+;;; Example:
+(defun verbose-sum (x y)
+  "Sum any two numbers after printing a message."
+  (format t "Summing ~d and ~d.~%" x y)
+  (+ x y))
+
+
+;;;; Optional Parameters
+&optional ; -> Keyword that can be used before optional parameters
+
+;;; Exmample:
+(defun foo (a b &optional c d) (list a b c d))
+(foo 1 2 3 4) ; (1 2 3 4)
+(foo 1 2 3) ; (1 2 3 nil)
+(foo 1 2) ; (1 2 nil nil)
+(foo 1) ; ERROR
+
