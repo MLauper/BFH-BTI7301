@@ -2,7 +2,7 @@
 (declaim (optimize (speed 0) (safety 3) (debug 3)))
 (require 'cl-fuse)
 
-;(in-package #:bfh-bti7301)
+;(in-package #:bfh-	bti7301)
 (format t "Starting BTI7301 Project File")
 
 (defclass sample-class ()
@@ -90,17 +90,7 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-;;;; Cl-Fuse Tinkering
+;;;;;;;;;;;;;;;;;;;;;;;; Cl-Fuse Tinkering
 (ql:quickload "cl-fuse")
 (ensure-directories-exist "/tmp/testFuseEmpty/")
 (cl-fuse:fuse-run '("none" "-d" "/tmp/testFuseEmpty"))
@@ -122,22 +112,20 @@
    (equalp (car split-path) "") ;; Return true for empty directory
    (> 3 (length split-path)) ;; Reutrn true for first and second stage
    ) ;; Return false for any other element
-  )
+)
 
 (defun symlink-target (split-path)
-    (print "-------------------------- SYMLINK-TARGET:")
-  (cond 
-   ((equalp (car split-path) "symlinks") (cdr split-path))
-   ((equalp (car split-path) "many-files") (cdr split-path))
-   (t nil)
-   )
-  )
+	(print "-------------------------- SYMLINK-TARGET:")
+	(cond 
+		((equalp (car split-path) "symlinks") (cdr split-path))
+		((equalp (car split-path) "many-files") (cdr split-path))
+		(t nil)
+	)
+)
 
 (defun directory-content (split-path)
-    (print "-------------------------- DIRECTORY-CONTENT:")
+	(print "-------------------------- DIRECTORY-CONTENT:")
     '("a" "b" "c")
-    
-    
 ;;  (cond 
 ;;   ((or (null split-path) (equalp "" (car split-path)))
 ;;    '("symlinks" "same-name" "many-files" "myDir")) ;; <- Root Dir Content
@@ -152,42 +140,112 @@
 ;;    '("one" "two" "three")) ;; <- New TestDir Content
 ;;   (t nil)
 ;;   )
-  )
+)
 
 (defun file-size (split-path)
-    (print "-------------------------- FILE-SIZE:")
-  (cond
-    (t 10)
-   ((and (equalp (car split-path) "same-name") (null (cddr split-path)))
-    (length (cadr split-path)))
-   (t nil)))
+	(print "-------------------------- FILE-SIZE:")
+	(cond
+		(t 10)
+		((and (equalp (car split-path) "same-name") (null (cddr split-path)))
+			(length (cadr split-path)))
+		(t nil))
+)
 
 (defun file-read (split-path size offset fh)
-  (declare (ignore fh))
-  (declare (ignore size))
-  (declare (ignore offset))
-  (print "                                FILE READ")
+	(declare (ignore fh))
+	(declare (ignore size))
+	(declare (ignore offset))
+	(print "-------------------------- FILE-READ:")
 ;;  (let* (
 ;;         (name (cadr split-path))
 ;;         )
   ;;        `(:offset 0 ,name)))
-  '(:offset 0 "someString"))
+	'(:offset 0 "someString")
+)
 
 (defun is-executable (split-path)
   (declare (ignore split-path))
   (print "-------------------------- IS-EXECUTABLE:")
   (= 1 2)
-  )
+)
+  
+(defun is-symlink (split-path)
+	(print "-------------------------- IS-SYMLINK:")
+	(= 1 2)
+)
 
+(defun file-write-whole (split-path data)
+	(print "-------------------------- WRITE-FILE")
+	nil
+)
+
+(defun is-writeable (split-path)
+	(declare (ignore split-path))
+	(print "-------------------------- IS-writeable:")
+	(= 1 2)
+)
+
+(defun file-flush (path fh)
+	(print "-------------------------- FILE-FLUSH")
+	0
+)
+
+(defun file-release (path flags)
+	(print "-------------------------- FILE-RELEASE")
+	0
+)
+  
+(defun file-truncate (path offset)
+	(print "-------------------------- FILE-TRUNCATE")
+	0
+)
+  
+(defun file-create (path mode dev)
+	(print "-------------------------- FILE-CREATE")
+	nil
+)
+ 
+(defun dir-create (path mode)
+	(print "-------------------------- DIR-CREATE")
+	(- error-EACCES)
+)
+
+(defun file-remove (path)
+	(print "-------------------------- FILE-REMOVE")
+	(- error-EACCES)
+)
+
+(defun dir-remove (path)
+	(print "-------------------------- DIR-REMOVE")
+	(- error-EACCES)
+)
+
+(defun symlink (path content)
+	(print "-------------------------- SYMLINK")
+	(- error-EACCES)
+)
+ 
 (defun fuse-test ()
-  (fuse-run '("none" "/tmp/mytest" "-d")
-            :directoryp 'is-directory 
-            :directory-content 'directory-content
-;;            :symlink-target 'symlink-target
-            :file-size 'file-size
-            :file-read 'file-read
-	    :file-executable-p 'is-executable
-            ))
+	(fuse-run '("none" "/tmp/mytest" "-d")
+    :directoryp 'is-directory 
+    :directory-content 'directory-content
+	:symlink-target 'symlink-target
+	:file-size 'file-size
+	:file-read 'file-read
+	:file-executable-p 'is-executable
+	:symlinkp 'is-symlink
+    :file-write-whole 'file-write-whole
+    :file-writeable-p 'is-writeable
+    :file-flush 'file-flush
+    :file-release 'file-release
+    :truncate 'file-truncate
+    :file-create 'file-create
+    :mkdir 'dir-create
+    :unlink 'file-remove
+    :rmdir  'dir-remove
+	:symlink 'symlink
+	)
+)
 
 (fuse-test)
 
