@@ -1,5 +1,6 @@
 ;;;; BFH-BTI7301.lisp
 (declaim (optimize (speed 0) (safety 3) (debug 3)))
+(ql:quickload "cl-fuse")
 (require 'cl-fuse)
 
 ;(in-package #:bfh-	bti7301)
@@ -124,22 +125,23 @@
 )
 
 (defun directory-content (split-path)
-	(print "-------------------------- DIRECTORY-CONTENT:")
-    '("a" "b" "c")
-;;  (cond 
-;;   ((or (null split-path) (equalp "" (car split-path)))
-;;    '("symlinks" "same-name" "many-files" "myDir")) ;; <- Root Dir Content
-;;   ((and
-;;     (equalp "many-files" (car split-path))
-;;     (null (cdr split-path)))
-;;    (loop for i from 0 upto 100 collect (format nil "~a" i)))
-;;   ((and
-;;     (equalp "myDir" (car split-path))
-;;     (null (cdr split-path))
-;;     )
-;;    '("one" "two" "three")) ;; <- New TestDir Content
-;;   (t nil)
-;;   )
+  (print "-------------------------- DIRECTORY-CONTENT:")
+
+	(defparameter *fuse-display-classes* (remove-duplicates (mapcar #'(lambda (object) (write-to-string (class-of object))) *fuse-objects*) :test #'equal))
+	(defparameter *fuse-display-class-instances*  (remove-duplicates (mapcar #'(lambda (object) (write-to-string object)) (remove-if-not #'(lambda (object) (cond ((equal (first split-path) (write-to-string (class-of object))) t) (t nil))) *fuse-objects*)) :test #'equal))
+	;;(defparameter *fuse-display-class-instance-slots* '("x" "y" "z"))
+	;;(defparameter *fuse-display-class-instance-slots*  (remove-duplicates (mapcar #'(lambda (object) (write-to-string object)) (remove-if-not #'(lambda (object) (cond ((equal (second split-path) (write-to-string object)) t) (t nil))) *fuse-objects*)) :test #'equal))
+	;;(defparameter *fuse-display-class-instance-slots* (mapcar #'(lambda (slot) (concatenate 'string (write-to-string slot) "_")) (mapcar #'sb-pcl:slot-definition-name (sb-pcl:class-slots (class-of (first (remove-if-not #'(lambda (object) (cond ((equal (second split-path) (write-to-string object)) t) (t nil))) *fuse-objects*)))))))
+	(defparameter *fuse-dispaly-class-instance* (first (remove-if-not #'(lambda (object) (cond ((equal (second split-path) (write-to-string object)) t) (t nil))) *fuse-objects*)))
+	(defparameter *fuse-display-class-instance-slots* (mapcar #'(lambda (slot) (concatenate 'string (write-to-string slot) "_")) (mapcar #'sb-pcl:slot-definition-name (sb-pcl:class-slots (class-of (first (remove-if-not #'(lambda (object) (cond ((equal (second split-path) (write-to-string object)) t) (t nil))) *fuse-objects*)))))))
+	
+	
+	(cond
+	  ((= (length split-path) 0) *fuse-display-classes*) ;; Dump Classes on the first layer
+	  ((= (length split-path) 1) *fuse-display-class-instances*) ;; Dump Instances on the second layer
+	  ((= (length split-path) 2) *fuse-display-class-instance-slots*) ;; Dump slots on the third layer
+	  (t '("a" "b" "c"))
+	  )
 )
 
 (defun file-size (split-path)
@@ -226,28 +228,47 @@
 )
  
 (defun fuse-test ()
-	(fuse-run '("none" "/tmp/mytest" "-d")
-    :directoryp 'is-directory 
-    :directory-content 'directory-content
-	:symlink-target 'symlink-target
-	:file-size 'file-size
-	:file-read 'file-read
-	:file-executable-p 'is-executable
-	:symlinkp 'is-symlink
-    :file-write-whole 'file-write-whole
-    :file-writeable-p 'is-writeable
-    :file-flush 'file-flush
-    :file-release 'file-release
-    :truncate 'file-truncate
-    :file-create 'file-create
-    :mkdir 'dir-create
-    :unlink 'file-remove
-    :rmdir  'dir-remove
-	:symlink 'symlink
-	)
-)
+  (defparameter *fuse-objects* nil)
+  (fuse-run '("none" "/tmp/mytest" "-d")
+	    :directoryp 'is-directory
+	    :directory-content 'directory-content
+	    :symlink-target 'symlink-target
+	    :file-size 'file-size
+	    :file-read 'file-read
+	    :file-executable-p 'is-executable
+	    :symlinkp 'is-symlink
+	    :file-write-whole 'file-write-whole
+	    :file-writeable-p 'is-writeable
+	    :file-flush 'file-flush
+	    :file-release 'file-release
+	    :truncate 'file-truncate
+	    :file-create 'file-create
+	    :mkdir 'dir-create
+	    :unlink 'file-remove
+	    :rmdir  'dir-remove
+	    :symlink 'symlink
+	    )
+  )
+
+(defun add-fuse-object (object)
+  (setq *fuse-objects* (append *fuse-objects* object))
+  )
 
 (fuse-test)
 
+(defparameter sample-instance3 (make-instance 'sample-class2))
+(setf (slot-value sample-instance3 'SomeString) "Sample Content")
+(setf (slot-value sample-instance3 'SomeInteger) 42)
+(setf (slot-value sample-instance3 'SomeList) (list 1 2 3))
+(setf (slot-value sample-instance3 'SomeObject) sample-instance2)
+(add-fuse-object (list sample-instance3))
 
+(add-fuse-object (list sample-instance sample-instance2))
 
+(defclass sample-class3 ()
+  (SomeString
+   SomeInteger
+   SomeList
+   SomeObject)
+  )
+(add-fuse-object (list (make-instance 'sample-class3)))
