@@ -121,12 +121,12 @@
       (equalp (car split-path)
 	      "") ;; Return true for empty directory
       (> 3 (length split-path)) ;; Reutrn true for first and second stage
-      (and (> (length split-path) 2)
-	   (slot-boundp *current-object*
-			(intern (car (last split-path)))) ;; Return false for unbound slot values
-	   (equalp (write-to-string (class-of (slot-value *current-object*
-							  (intern (car (last split-path))))))
-		   "#<BUILT-IN-CLASS COMMON-LISP:CONS>"))) ;; Return false for any other element
+		(and 
+			(> (length split-path) 2)
+			(slot-boundp *current-object* (intern (car (last split-path)))) ;; Return false for unbound slot values
+			(equalp (write-to-string (class-of (slot-value *current-object* (intern (car (last split-path)))))) "#<BUILT-IN-CLASS COMMON-LISP:CONS>")
+		)
+	) ;; Return false for any other element
   )
 
 (defun symlink-target (split-path)
@@ -189,8 +189,31 @@
 													   ((equal (second split-path) (write-to-string object)) t)
 													   (t nil)))
 												      *fuse-objects*))))))) ;; Dump slots on the third layer
-   ((= (length split-path) 3)
-    (list "a" "b" "c")) ;; Dump Integer-List for size of list
+   ((> (length split-path) 2) 
+	   
+	   (print "ENTERING DEEP SPLIT PATH")
+	   (defparameter *split-path* split-path) ;; DEGUBGGING
+	   (defparameter *list-path* (cdr (cdr split-path)))
+	   (defparameter *current-object* (first (remove-if-not #'(lambda (object)
+							   (cond
+							    ((equal (second split-path) (write-to-string object)) t)
+							    (t nil)))
+						       *fuse-objects*)))
+	;;  (while (not (= 1 (length *list-path*)))
+	;;		((defparameter *current-object* (slot-value *current-object* (intern (car (first list-path)))))
+	;;		 (defparameter *list-path* (cdr *list-path*))
+	;;		)
+	;;  )
+   (defparameter *current-object* (slot-value *current-object* (intern (car *list-path*))))
+	(defparameter *list-objects* (list))
+   (loop for i from 0 to (- (length *current-object*) 1) do (defparameter *list-objects* (append *list-objects* (list (write-to-string i)))))
+	*list-objects*
+	   
+	   ) ;; Dump Integer-List for size of list
+   
+   
+   
+   
    (t '("NOT_IMPLEMENTED"))))
 
 (defun file-size (split-path)
