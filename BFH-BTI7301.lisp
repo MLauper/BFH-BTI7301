@@ -98,12 +98,14 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;; Cl-Fuse Tinkering
 (ql:quickload "cl-fuse")
+(ql:quickload :split-sequence) 
 ;;(ensure-directories-exist "/tmp/testFuseEmpty/")
 ;;(cl-fuse:fuse-run '("none" "-d" "/tmp/testFuseEmpty"))
 
 (require 'cl-fuse)
 (require 'cffi)
 (require 'cl-utilities)
+
 
 (use-package 'cl-fuse)
 (use-package 'cffi)
@@ -151,15 +153,32 @@
 
 (defun symlink-target (split-path)
   (print "-------------------------- SYMLINK-TARGET:")
- ;;(cond
- ;;((equalp (car split-path)
-; ;   "symlinks")
- ;; (cdr split-path))
- ;;((equalp (car split-path)
-; ;   "many-files")
- ;; (cdr split-path))
- ;;(t nil))
-	'("tmp" "mytest" "#<STANDARD-CLASS COMMON-LISP-USER::SAMPLE-CLASS2>")
+	
+	(defparameter *split-path* split-path)
+	(defparameter *list-path* (cdr (cdr *split-path*)))
+	(defparameter *current-object* (first (remove-if-not #'(lambda (object) (cond ((equal (second *split-path*) (write-to-string object)) t) (t nil))) *fuse-objects*)))
+	(defparameter *fuse-symlink* nil)
+	(when (slot-boundp *current-object* (intern (car *list-path*)))
+	(if (cdr *list-path*)
+	(progn
+		(defparameter *current-list* (slot-value *current-object* (intern (car *list-path*))))
+		(defparameter *list-path* (cdr *list-path*))
+		(loop while *list-path* do
+			(progn
+				(defparameter *current-list* (nth (parse-integer (car *list-path*)) *current-list*))
+				(defparameter *list-path* (cdr *list-path*))
+			)
+		)
+		(defparameter *fuse-symlink* *current-list*)
+	)
+	(defparameter *fuse-symlink* (slot-value *current-object* (intern (first (cdr (cdr *split-path*))))))
+	))
+	
+	(defparameter *fuse-symlink-class* (remove-duplicates (mapcar #'(lambda (object) (write-to-string (class-of object))) (remove-if-not #'(lambda (object) (cond ((equal (write-to-string *fuse-symlink*) (write-to-string  object)) t) (t nil))) *fuse-objects*)) :test #'equal))
+	(defparameter *fuse-symlink-instance* (remove-duplicates (mapcar #'(lambda (object) (write-to-string object)) (remove-if-not #'(lambda (object) (cond ((equal (write-to-string *fuse-symlink*) (write-to-string  object)) t) (t nil))) *fuse-objects*)) :test #'equal))
+	
+	(append *fuse-base-path* *fuse-symlink-class* *fuse-symlink-instance*)
+	
 )
 
 (defun directory-content (split-path)
@@ -251,11 +270,7 @@
 	(progn
 		(defparameter *split-path* split-path)
 		(defparameter *list-path* (cdr (cdr *split-path*)))
-		(defparameter *current-object* (first (remove-if-not #'(lambda (object)
-							   (cond
-							    ((equal (second *split-path*) (write-to-string object)) t)
-							    (t nil)))
-						       *fuse-objects*)))
+		(defparameter *current-object* (first (remove-if-not #'(lambda (object) (cond ((equal (second *split-path*) (write-to-string object)) t) (t nil))) *fuse-objects*)))
 		(defparameter *fuse-symlink* nil)
 		(when (slot-boundp *current-object* (intern (car *list-path*)))
 		(if (cdr *list-path*)
@@ -321,13 +336,13 @@
   (- error-EACCES))
 
 (defun fuse-test (basePath)
-  (defparameter *fuse-base-path* basePath)
+  (defparameter *fuse-base-path* (cdr (split-sequence:split-sequence #\/ basePath)))
   (defparameter *fuse-objects* nil)
   (run-program "/bin/umount"
 	       '()
 	       :input "/tmp/mytest"
 	       :output *standard-output*)
-  (ensure-directories-exist *fuse-base-path*)
+  (ensure-directories-exist "/tmp/mytest")
   ;; Execute Fuse-Run in separate thread to run async
   (sb-thread::make-thread (lambda ()
 			    (fuse-run '("none" "/tmp/mytest" "-d")
