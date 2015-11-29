@@ -251,12 +251,30 @@
   (declare (ignore size))
   (declare (ignore offset))
   (print "-------------------------- FILE-READ:")
-  ;;  (let* (
-  ;;         (name (cadr split-path))
-  ;;         )
-  ;;        `(:offset 0 ,name)))
-
-  '(:offset 0 "someString"))
+  ;; Always asuming, that only "true" files are read -> NO directories and no symlinks
+  
+  	(defparameter *split-path* split-path)
+	(defparameter *list-path* (cdr (cdr *split-path*)))
+	(defparameter *current-object* (first (remove-if-not #'(lambda (object) (cond ((equal (second *split-path*) (write-to-string object)) t) (t nil))) *fuse-objects*)))
+	(defparameter *fuse-symbol-content* nil)
+	(when (slot-boundp *current-object* (intern (car *list-path*)))
+	(if (cdr *list-path*)
+	(progn
+		(defparameter *current-list* (slot-value *current-object* (intern (car *list-path*))))
+		(defparameter *list-path* (cdr *list-path*))
+		(loop while *list-path* do
+			(progn
+				(defparameter *current-list* (nth (parse-integer (car *list-path*)) *current-list*))
+				(defparameter *list-path* (cdr *list-path*))
+			)
+		)
+		(defparameter *fuse-symbol-content* *current-list*)
+	)
+	(defparameter *fuse-symbol-content* (slot-value *current-object* (intern (first (cdr (cdr *split-path*))))))
+	))
+	
+	(append '(:offset 0) (list (write-to-string *fuse-symbol-content*)))
+  )
 
 (defun is-executable (split-path)
   (declare (ignore split-path))
