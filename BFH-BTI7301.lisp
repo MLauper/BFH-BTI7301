@@ -99,6 +99,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;; Cl-Fuse Tinkering
 (ql:quickload "cl-fuse")
 (ql:quickload :split-sequence) 
+  (ql:quickload "FLEXI-STREAMS")
 ;;(ensure-directories-exist "/tmp/testFuseEmpty/")
 ;;(cl-fuse:fuse-run '("none" "-d" "/tmp/testFuseEmpty"))
 
@@ -264,7 +265,6 @@
 	((equal (write-to-string (class-of *fuse-symbol-content*)) "#<BUILT-IN-CLASS COMMON-LISP:FIXNUM>") 16)
 	((equal (write-to-string (class-of *fuse-symbol-content*)) "#<BUILT-IN-CLASS COMMON-LISP:SYMBOL>") 1)
 	((equal (write-to-string (class-of *fuse-symbol-content*)) "#<BUILT-IN-CLASS COMMON-LISP:NULL>") 3)
-
 	(t 99)
 	)
    )
@@ -335,14 +335,58 @@
   )
 )
 
-(defun file-write-whole (split-path data)
+(defun file-write (split-path data offset fh)
   (print "-------------------------- WRITE-FILE")
+  (print "DATA:")
+  (print data)
+  (print "OFFSET:")
+  (print offset)
+  (print "FH:")
+  (print fh)
+  
+  (defparameter *fuse-write-data* data)
+  
+
+  (defparameter *fuse-write-data-string* (flexi-streams:octets-to-string *fuse-write-data* :external-format :utf-8))
+  ;;(read-from-string (flexi-streams:octets-to-string *fuse-write-data* :external-format :utf-8))
+  ;;(class-of (read-from-string (flexi-streams:octets-to-string *fuse-write-data* :external-format :utf-8)))
+  
+  (if (equal (subseq *fuse-write-data-string* 0 1) "\"") ())
+	
+	(defparameter *split-path* split-path)
+	(defparameter *list-path* (cdr (cdr *split-path*)))
+	(defparameter *current-object* (first (remove-if-not #'(lambda (object) (cond ((equal (second *split-path*) (write-to-string object)) t) (t nil))) *fuse-objects*)))
+	(defparameter *fuse-symbol-content* nil)
+	(when (slot-boundp *current-object* (intern (car *list-path*)))
+	(if (cdr *list-path*)
+	(progn
+		(defparameter *current-list* (slot-value *current-object* (intern (car *list-path*))))
+		(defparameter *list-path* (cdr *list-path*))
+		(loop while *list-path* do
+			(progn
+				(defparameter *current-list* (nth (parse-integer (car *list-path*)) *current-list*))
+				(defparameter *list-path* (cdr *list-path*))
+			)
+		)
+		(setf *fuse-symbol-content* *fuse-write-data-string*)
+	)
+	(setf (slot-value *current-object* (intern (first (cdr (cdr *split-path*))))) *fuse-write-data-string*)
+	))
+  
+t)
+  
+(defun file-write-whole (split-path data)
+  (print "-------------------------- WRITE-FILE-WHOLE")
+  (print data)
   nil)
 
 (defun is-writeable (split-path)
   (declare (ignore split-path))
+	;; Only normal files are writable
   (print "-------------------------- IS-writeable:")
-  (= 1 2))
+  (if (and (not (is-directory split-path)) (not (is-symlink split-path))) t nil)
+  
+)
 
 (defun file-flush (path fh)
   (print "-------------------------- FILE-FLUSH")
@@ -394,6 +438,7 @@
 				      :file-read 'file-read
 				      :file-executable-p 'is-executable
 				      :symlinkp 'is-symlink
+					  :file-write 'file-write
 				      :file-write-whole 'file-write-whole
 				      :file-writeable-p 'is-writeable
 				      :file-flush 'file-flush
