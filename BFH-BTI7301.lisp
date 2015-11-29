@@ -111,61 +111,60 @@
 
 (defun is-directory (split-path)
   (print "-------------------------- IS-DIRECTORY:")
-  ;;(print (concatenate 'string "Split-Path Length: " (write-to-string (length split-path))))
-  (defparameter *current-object* (first (remove-if-not #'(lambda (object)
+  (defparameter *dir-split-path* split-path)
+  ;;(print (concatenate 'string "Split-Path Length: " (write-to-string (length *dir-split-path*))))
+  (defparameter *dir-current-object* (first (remove-if-not #'(lambda (object)
 							   (cond
 							    ((equal (second split-path) (write-to-string object)) t)
 							    (t nil)))
 						       *fuse-objects*)))
-  (or (null split-path) ;; Return true for root directory
-      (equalp (car split-path)
-	      "") ;; Return true for empty directory
-      (> 3 (length split-path)) ;; Reutrn true for first and second stage
+	
+  (or (null *dir-split-path*) ;; Return true for root directory
+      (equalp (car *dir-split-path*) "") ;; Return true for empty directory
+      (> 3 (length *dir-split-path*)) ;; Reutrn true for first and second stage
 		(and 
-			(> (length split-path) 2)
-			(slot-boundp *current-object* (intern (car (last split-path)))) ;; Return false for unbound slot values
-			(equalp (write-to-string (class-of (slot-value *current-object* (intern (car (last split-path)))))) "#<BUILT-IN-CLASS COMMON-LISP:CONS>")
+			(= (length *dir-split-path*) 3)
+			(slot-boundp *dir-current-object* (intern (car (last split-path)))) ;; Return false for unbound slot values
+			(equalp (write-to-string (class-of (slot-value *dir-current-object* (intern (car (last split-path)))))) "#<BUILT-IN-CLASS COMMON-LISP:CONS>") ;; Return true for Lists
 		)
-	) ;; Return false for any other element
-  )
+		(and
+				(> (length *dir-split-path*) 3)
+				(slot-boundp *dir-current-object* (intern (car (cdr (cdr *dir-split-path*)))))
+				(progn
+					(defparameter *dir-list-path* (cdr (cdr *dir-split-path*)))
+					(defparameter *dir-current-list* (slot-value *dir-current-object* (intern (car *dir-list-path*))))
+					(defparameter *dir-list-path* (cdr *dir-list-path*))
+					
+					(loop while (not (= 1 (length *dir-list-path*))) do
+						(progn
+							(defparameter *dir-current-list* (nth (parse-integer (car *dir-list-path*)) *dir-current-list*))
+							(defparameter *dir-list-path* (cdr *dir-list-path*))
+						)
+					)
+
+					(equalp (write-to-string (class-of (nth (parse-integer (car *dir-list-path*)) *dir-current-list*))) "#<BUILT-IN-CLASS COMMON-LISP:CONS>")
+				
+				)	
+		)
+  ) ;; Return false for any other element
+)
 
 (defun symlink-target (split-path)
   (print "-------------------------- SYMLINK-TARGET:")
-  (cond
-   ((equalp (car split-path)
-	    "symlinks")
-    (cdr split-path))
-   ((equalp (car split-path)
-	    "many-files")
-    (cdr split-path))
-   (t nil)))
+ ;;(cond
+ ;;((equalp (car split-path)
+; ;   "symlinks")
+ ;; (cdr split-path))
+ ;;((equalp (car split-path)
+; ;   "many-files")
+ ;; (cdr split-path))
+ ;;(t nil))
+	'("tmp" "mytest" "#<STANDARD-CLASS COMMON-LISP-USER::SAMPLE-CLASS2>")
+)
 
 (defun directory-content (split-path)
   (print "-------------------------- DIRECTORY-CONTENT:")
-  (defparameter *fuse-display-classes* (remove-duplicates (mapcar #'(lambda (object)
-								      (write-to-string (class-of object)))
-								  *fuse-objects*)
-							  :test #'equal))
-  (defparameter *fuse-display-class-instances* (remove-duplicates (mapcar #'(lambda (object)
-									      (write-to-string object))
-									  (remove-if-not #'(lambda (object)
-											     (cond
-											      ((equal (first split-path) (write-to-string (class-of object))) t)
-											      (t nil)))
-											 *fuse-objects*))
-								  :test #'equal))
-  (defparameter *fuse-dispaly-class-instance* (first (remove-if-not #'(lambda (object)
-									(cond
-									 ((equal (second split-path) (write-to-string object)) t)
-									 (t nil)))
-								    *fuse-objects*)))
-  (defparameter *fuse-display-class-instance-slots* (mapcar #'(lambda (slot)
-								(write-to-string slot))
-							    (mapcar #'sb-pcl:slot-definition-name (sb-pcl:class-slots (class-of (first (remove-if-not #'(lambda (object)
-																			  (cond
-																			   ((equal (second split-path) (write-to-string object)) t)
-																			   (t nil)))
-																		      *fuse-objects*)))))))
+
   (cond
    ((= (length split-path) 0)
     (remove-duplicates (mapcar #'(lambda (object)
@@ -191,22 +190,24 @@
 												      *fuse-objects*))))))) ;; Dump slots on the third layer
    ((> (length split-path) 2) 
 	   
-	   (print "ENTERING DEEP SPLIT PATH")
 	   (defparameter *split-path* split-path) ;; DEGUBGGING
-	   (defparameter *list-path* (cdr (cdr split-path)))
+	   (defparameter *list-path* (cdr (cdr *split-path*)))
 	   (defparameter *current-object* (first (remove-if-not #'(lambda (object)
 							   (cond
-							    ((equal (second split-path) (write-to-string object)) t)
+							    ((equal (second *split-path*) (write-to-string object)) t)
 							    (t nil)))
 						       *fuse-objects*)))
-	;;  (while (not (= 1 (length *list-path*)))
-	;;		((defparameter *current-object* (slot-value *current-object* (intern (car (first list-path)))))
-	;;		 (defparameter *list-path* (cdr *list-path*))
-	;;		)
-	;;  )
-   (defparameter *current-object* (slot-value *current-object* (intern (car *list-path*))))
+		(defparameter *current-list* (slot-value *current-object* (intern (car *list-path*))))
+		(defparameter *list-path* (cdr *list-path*))
+	  (loop while *list-path* do
+			(progn
+				(defparameter *current-list* (nth (parse-integer (car *list-path*)) *current-list*))
+				(defparameter *list-path* (cdr *list-path*))
+			)
+	  )
+   
 	(defparameter *list-objects* (list))
-   (loop for i from 0 to (- (length *current-object*) 1) do (defparameter *list-objects* (append *list-objects* (list (write-to-string i)))))
+   (loop for i from 0 to (- (length *current-list*) 1) do (defparameter *list-objects* (append *list-objects* (list (write-to-string i)))))
 	*list-objects*
 	   
 	   ) ;; Dump Integer-List for size of list
@@ -245,7 +246,38 @@
 
 (defun is-symlink (split-path)
   (print "-------------------------- IS-SYMLINK:")
-  (= 1 2))
+  (and 
+	(> (length split-path) 2)
+	(progn
+		(defparameter *split-path* split-path)
+		(defparameter *list-path* (cdr (cdr *split-path*)))
+		(defparameter *current-object* (first (remove-if-not #'(lambda (object)
+							   (cond
+							    ((equal (second *split-path*) (write-to-string object)) t)
+							    (t nil)))
+						       *fuse-objects*)))
+		(defparameter *fuse-symlink* nil)
+		(when (slot-boundp *current-object* (intern (car *list-path*)))
+		(if (cdr *list-path*)
+		(progn
+			(defparameter *current-list* (slot-value *current-object* (intern (car *list-path*))))
+			(defparameter *list-path* (cdr *list-path*))
+			(loop while *list-path* do
+				(progn
+					(defparameter *current-list* (nth (parse-integer (car *list-path*)) *current-list*))
+					(defparameter *list-path* (cdr *list-path*))
+				)
+			)
+			(defparameter *fuse-symlink* *current-list*)
+		)
+		(defparameter *fuse-symlink* (slot-value *current-object* (intern (first (cdr (cdr *split-path*))))))
+		))
+		
+		(if (remove-duplicates (mapcar #'(lambda (object) (write-to-string object)) (remove-if-not #'(lambda (object) (cond ((equal (write-to-string *fuse-symlink*) (write-to-string  object)) t) (t nil))) *fuse-objects*)) :test #'equal) t)
+		
+	)
+  )
+)
 
 (defun file-write-whole (split-path data)
   (print "-------------------------- WRITE-FILE")
@@ -288,13 +320,14 @@
   (print "-------------------------- SYMLINK")
   (- error-EACCES))
 
-(defun fuse-test ()
+(defun fuse-test (basePath)
+  (defparameter *fuse-base-path* basePath)
   (defparameter *fuse-objects* nil)
   (run-program "/bin/umount"
 	       '()
-	       :input "/tmp/mytest/"
+	       :input "/tmp/mytest"
 	       :output *standard-output*)
-  (ensure-directories-exist "/tmp/mytest/")
+  (ensure-directories-exist *fuse-base-path*)
   ;; Execute Fuse-Run in separate thread to run async
   (sb-thread::make-thread (lambda ()
 			    (fuse-run '("none" "/tmp/mytest" "-d")
@@ -319,14 +352,12 @@
 (defun add-fuse-object (object)
   (setq *fuse-objects* (append *fuse-objects* object)))
 
-(fuse-test)
+(fuse-test "/tmp/mytest")
 
 (defparameter sample-instance3 (make-instance 'sample-class2))
 (setf (slot-value sample-instance3 'SomeString) "Sample Content")
 (setf (slot-value sample-instance3 'SomeInteger) 42)
-(setf (slot-value sample-instance3 'SomeList) (list 1
-						    2
-						    (list 3 4 5)))
+(setf (slot-value sample-instance3 'SomeList) (list 1 2 (list (list 3 (list 8 (list (list (make-instance 'sample-class2) sample-instance2 12 13)))))))
 (setf (slot-value sample-instance3 'SomeObject) sample-instance2)
 (add-fuse-object (list sample-instance3))
 
