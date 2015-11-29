@@ -13,7 +13,7 @@
   (slotA slotB slotC))
 
 (defclass sample-class2 ()
-  (SomeString SomeInteger SomeList SomeObject))
+  (SomeString SomeInteger SomeList SomeObject SomeTrueBoolean SomeFalseBoolean))
 
 (defgeneric dumpObject
   (object)
@@ -238,13 +238,36 @@
 
 (defun file-size (split-path)
   (print "-------------------------- FILE-SIZE:")
-  (cond
-   (t 10)
-   ((and (equalp (car split-path)
-		 "same-name")
-	 (null (cddr split-path)))
-    (length (cadr split-path)))
-   (t nil)))
+
+  (defparameter *split-path* split-path)
+	(defparameter *list-path* (cdr (cdr *split-path*)))
+	(defparameter *current-object* (first (remove-if-not #'(lambda (object) (cond ((equal (second *split-path*) (write-to-string object)) t) (t nil))) *fuse-objects*)))
+	(defparameter *fuse-symbol-content* nil)
+	(when (slot-boundp *current-object* (intern (car *list-path*)))
+	(if (cdr *list-path*)
+	(progn
+		(defparameter *current-list* (slot-value *current-object* (intern (car *list-path*))))
+		(defparameter *list-path* (cdr *list-path*))
+		(loop while *list-path* do
+			(progn
+				(defparameter *current-list* (nth (parse-integer (car *list-path*)) *current-list*))
+				(defparameter *list-path* (cdr *list-path*))
+			)
+		)
+		(defparameter *fuse-symbol-content* *current-list*)
+	)
+	(defparameter *fuse-symbol-content* (slot-value *current-object* (intern (first (cdr (cdr *split-path*))))))
+	))
+	
+	(cond 
+	((equal (write-to-string (class-of *fuse-symbol-content*)) "#<BUILT-IN-CLASS SB-KERNEL::SIMPLE-CHARACTER-STRING>") (+ (length *fuse-symbol-content*) 2)) ;; Add 2 for ""
+	((equal (write-to-string (class-of *fuse-symbol-content*)) "#<BUILT-IN-CLASS COMMON-LISP:FIXNUM>") 16)
+	((equal (write-to-string (class-of *fuse-symbol-content*)) "#<BUILT-IN-CLASS COMMON-LISP:SYMBOL>") 1)
+	((equal (write-to-string (class-of *fuse-symbol-content*)) "#<BUILT-IN-CLASS COMMON-LISP:NULL>") 3)
+
+	(t 99)
+	)
+   )
 
 (defun file-read (split-path size offset fh)
   (declare (ignore fh))
@@ -388,9 +411,11 @@
 (fuse-test "/tmp/mytest")
 
 (defparameter sample-instance3 (make-instance 'sample-class2))
-(setf (slot-value sample-instance3 'SomeString) "Sample Content")
+(setf (slot-value sample-instance3 'SomeString) "Sample Content with several byte size...")
 (setf (slot-value sample-instance3 'SomeInteger) 42)
 (setf (slot-value sample-instance3 'SomeList) (list 1 2 (list (list 3 (list 8 (list (list (make-instance 'sample-class2) sample-instance2 12 13)))))))
+(setf (slot-value sample-instance3 'SomeTrueBoolean) t)
+(setf (slot-value sample-instance3 'SomeFalseBoolean) NIL)
 (setf (slot-value sample-instance3 'SomeObject) sample-instance2)
 (add-fuse-object (list sample-instance3))
 
