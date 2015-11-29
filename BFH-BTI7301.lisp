@@ -346,14 +346,19 @@
   
   (defparameter *fuse-write-data* data)
   
-
   (defparameter *fuse-write-data-string* (flexi-streams:octets-to-string *fuse-write-data* :external-format :utf-8))
-  ;;(read-from-string (flexi-streams:octets-to-string *fuse-write-data* :external-format :utf-8))
-  ;;(class-of (read-from-string (flexi-streams:octets-to-string *fuse-write-data* :external-format :utf-8)))
+  (map 'string #'code-char *fuse-write-data*)
   
-  (if (equal (subseq *fuse-write-data-string* 0 1) "\"") ())
-	
-	(defparameter *split-path* split-path)
+  (cond 
+	;; Convert Integer
+	((equalp (first (map 'list #'code-char *fuse-write-data*)) #\")
+		(defparameter *fuse-write-data-converted* (map 'string #'code-char *fuse-write-data*)))
+	;; Convert String
+	((not (equalp (first (map 'list #'code-char *fuse-write-data*)) #\"))
+		(defparameter *fuse-write-data-converted* (parse-integer (map 'string #'code-char *fuse-write-data*) :junk-allowed t)))
+  )
+    
+  	(defparameter *split-path* split-path)
 	(defparameter *list-path* (cdr (cdr *split-path*)))
 	(defparameter *current-object* (first (remove-if-not #'(lambda (object) (cond ((equal (second *split-path*) (write-to-string object)) t) (t nil))) *fuse-objects*)))
 	(defparameter *fuse-symbol-content* nil)
@@ -368,9 +373,9 @@
 				(defparameter *list-path* (cdr *list-path*))
 			)
 		)
-		(setf *fuse-symbol-content* *fuse-write-data-string*)
+		(setf *fuse-symbol-content* *fuse-write-data-converted*)
 	)
-	(setf (slot-value *current-object* (intern (first (cdr (cdr *split-path*))))) *fuse-write-data-string*)
+	(setf (slot-value *current-object* (intern (first (cdr (cdr *split-path*))))) *fuse-write-data-converted*)
 	))
   
 t)
