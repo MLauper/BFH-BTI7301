@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html ng-app="thefuseproject">
+<head>
+    <title>the FUSE project</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=9; IE=10; IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="utf-8" />
+
+    <link type="text/css" rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" />
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.4/jquery.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.4.7/angular.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.4.7/angular-animate.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.4.7/i18n/angular-locale_de-ch.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/angular-ui-bootstrap/0.14.2/ui-bootstrap-tpls.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/angular-ui-router/0.2.15/angular-ui-router.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.10.6/moment.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.10.6/locale/de.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/rxjs/4.0.6/rx.all.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/textAngular/1.4.6/textAngular-rangy.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/textAngular/1.4.6/textAngular-sanitize.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/textAngular/1.4.6/textAngular.min.js "></script>
+    <script type="text/javascript" src="~/scripts/lib/js/formatter.js?@Model.CurrentVersion"></script>
+    <script type="text/javascript" src="~/scripts/app.all.js?@Model.CurrentVersion"></script>
+
+    <script type="text/javascript">
+        if (window.console === undefined) {
+            window.console = { log: function () { }, info: function () { }, warn: function () { }, error: function () { } };
+        }
+    </script>
+</head>
+<body ng-controller="fuse.index">
+    <header>
+        <div id="banner" role="banner" class="relative">
+            <a href="@Url.Content("#/")">
+                <img id="logo" src="@Url.Content("~/Assets/logo.png")" />
+            </a>
+            <div id="upper-top-right-bar" class="hidden-xs" ng-cloak>
+                <ul class="navbar-nav nav">
+                    <li>
+                        <p class="navbar-text">@Labels.SignedInAs <b>@Model.CurrentEmployee.Fullname</b></p>
+                    </li>
+                    <li uib-dropdown>
+                        <a class="btn" href="#" uib-dropdown-toggle>
+                            @Model.CurrentLanguage.TwoLetterISOLanguageName.ToUpper() 
+                            <span class="caret icon-arrow-down-8"></span>
+                        </a>
+                        <ul class="uib-dropdown-menu dropdown-menu-right">
+                            @foreach (var lang in Constants.Localization.SUPPORTED_CULTURE_INFOS.Select(c => c.TwoLetterISOLanguageName.ToUpper()))
+                            {
+                                <li>
+                                    <a href="#" ng-click="changeLanguage('@lang')">@lang</a>
+                                </li>
+                            }
+                        </ul>
+                    </li>
+                 </ul>
+            </div>
+        </div>
+        <nav class="navbar navbar-default" ng-cloak>
+            <div class="container-fluid">
+                <ul class="nav navbar-nav" role="navigation">
+                    <li nav-item sref="mine/mineAssessments"></li>
+                    <li nav-item sref="employee/employeeAssessments"></li>
+@if (Model.CurrentEmployee.IsHumanResources)
+{
+                    <li nav-item sref="assessments.hr"></li>
+                    <li nav-group sref="configuration" uib-dropdown>
+                        <a href="#" uib-dropdown-toggle>
+                            @Headers.HrConfiguration <span class="caret icon-arrow-down-8"></span>
+                        </a>
+                        <ul class="uib-dropdown-menu">
+                            <li nav-item sref="configuration/assessmentPeriods"></li>
+                            <li nav-item sref="configuration/assessmentTemplates"></li>
+                            <li nav-item sref="configuration/assessmentCompetences"></li>
+                            <li nav-item sref="configuration/employees"></li>
+                        </ul>
+                    </li>
+}
+                    <li nav-item sref="samples/icons"></li>
+                </ul>
+            </div>
+        </nav>
+        <div id="main-app-bar" ng-cloak>
+            <div class="container">
+                <div class="pull-left">
+                    <h1 id="page-header">{{$state.current.name | localize}}</h1>
+                </div>
+                <div class="app-bar" key="left"></div>
+
+                <div class="app-bar pull-right">
+                    <div class="pull-right" 
+                         uib-dropdown auto-close="outsideClick"
+                         hide-if-empty>
+                        <div class="pull-right btn-default btn icon-lg icon-ellipsis" title="@Tooltips.MoreCommands"
+                             uib-dropdown-toggle></div>
+
+                        <div class="uib-dropdown-menu dropdown-menu-right app-bar app-bar-vertical text-right"
+                             key="more">
+                            <h5 class="dropdown-header text-right hide-if-empty-ignored">
+                                @Tooltips.MoreCommands
+                            </h5>
+                        </div>
+                    </div>
+                </div>
+             </div> 
+        </div>
+    </header>
+
+    <main class="container" ng-cloak>
+        <ui-view/>
+    </main>
+
+    <footer ng-cloak>
+        <status class="fixed"></status>
+        <!-- Status templates -->
+        <div template="generic-error-template">
+            {{status.error.Message || "@Headers.Error"}}
+            <a class="pointer"
+               ng-click="more = !more">@Labels.ErrorDetails</a>
+            <div ng-show="more">
+                <div ng-if="status.error.ExceptionMessage != null">
+                    <pre><b>{{status.error.ExceptionType}}</b> {{status.error.ExceptionMessage}}</pre>
+                    <pre style="max-height: 100px; overflow-y: scroll"
+                         ng-show="status.error.StackTrace">{{status.error.StackTrace}}</pre>
+                </div>
+                <pre ng-if="status.error.statusText != null"><i>{{status.error.config.method}}</i> <span>{{status.error.config.url}}</span>: <code>{{status.error.statusText}}</code></pre>
+                <pre ng-if="status.error.ExceptionMessage == null && status.error.statusText == null">@Labels.InternalError: {{status.error.message || status.error}} <code>{{status.error.stack || ''}}</code></pre>
+            </div>
+        </div>
+        <div template="SNF.MAG.Ui.Web.ExceptionResults.ValidationExceptionResponse, SNF.MAG.Ui.Web">
+            {{status.error.Message}}
+            <ul class="help-block list-unstyled">
+                <li ng-repeat="s in status.error.Summary">{{s}}</li>
+            </ul>
+        </div>
+        <div template="SNF.MAG.Ui.Web.ExceptionResults.RefreshRequiredBusinessExceptionResponse, SNF.MAG.Ui.Web">
+            {{status.error.Message}} <a ui-sref="{{$root.$state.current.name}}" ui-sref-opts="{reload: true}">@Messages.RefreshThePage</a>
+        </div>
+        <div template="SNF.MAG.Ui.Web.ExceptionResults.BusinessExceptionResponse, SNF.MAG.Ui.Web">
+            {{status.error.Message}}
+        </div>
+        <div template="StateNotFoundMessage">
+            @Labels.CouldNotFindPage: "{{status.error.data}}"
+        </div>
+        <div template="StateErrorMessage">
+            @Labels.CouldNotLoadPage.
+        </div>
+    </footer>
+</body>
+</html>

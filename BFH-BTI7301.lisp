@@ -1,13 +1,12 @@
 ;;;; BFH-BTI7301.lisp
 ;;;; Test
-(declaim (optimize (speed 0)
-		   (safety 3)
-		   (debug 3)))
+(declaim (optimize (speed 0) (safety 3) (debug 3)))
 (ql:quickload "cl-fuse")
+(ql:quickload "Lucerne")
 (require 'cl-fuse)
 
 					;(in-package #:bfh-	bti7301)
-(format t "Starting BTI7301 Project File")
+(print "Starting BTI7301 Project File")
 
 (defclass sample-class ()
   (slotA slotB slotC))
@@ -19,7 +18,7 @@
   (object)
   (:documentation "Dump a random object into a file)"))
 (defmethod dumpObject
-  (object)
+  (object )
   ;;  (with-open-file (out "/tmp/test1.txt" :direction :output :if-does-not-exist :create :if-exists :supersede)
   ;;    (format out (slot-value object 'slotA))
   ;;    (format t (slot-value object 'slotA))
@@ -473,5 +472,24 @@ t)
 
 (defclass sample-class3 ()
   (SomeString SomeInteger SomeList SomeObject))
-(add-fuse-object (list (make-instance 'sample-class3)))
+(add-fuse-object (list (make-instance 'sample-class3))
 (print "THIS IS THE END OF FILE")
+
+
+
+
+
+
+
+
+
+
+
+
+
+(defapp app)
+@route app "/"
+(defview index ()
+  (respond "<h1>Welcome to Lucerne</h1>"))
+  
+(start app)
