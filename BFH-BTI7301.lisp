@@ -1,11 +1,10 @@
 ;;;; BFH-BTI7301.lisp
-;;;; Test
+
 (declaim (optimize (speed 0) (safety 3) (debug 3)))
 (ql:quickload "cl-fuse")
 (ql:quickload "Lucerne")
 (require 'cl-fuse)
 
-					;(in-package #:bfh-	bti7301)
 (print "Starting BTI7301 Project File")
 
 (defclass sample-class ()
@@ -18,14 +17,8 @@
   (object)
   (:documentation "Dump a random object into a file)"))
 (defmethod dumpObject
-  (object )
-  ;;  (with-open-file (out "/tmp/test1.txt" :direction :output :if-does-not-exist :create :if-exists :supersede)
-  ;;    (format out (slot-value object 'slotA))
-  ;;    (format t (slot-value object 'slotA))
-  ;;    (defparameter slots (mapcar #'sb-pcl:slot-definition-name (sb-pcl:class-slots (class-of object))))
-  ;;    (print slots)
+  (object)
   (defparameter slots (mapcar #'sb-pcl:slot-definition-name (sb-pcl:class-slots (class-of object))))
-  ;;(print slots)
   (defparameter basePath (concatenate 'string
 				      "/tmp/newDir/"
 				      (write-to-string (class-of object))
@@ -66,36 +59,11 @@
 (setf (slot-value sample-instance3 'SomeObject) sample-instance2)
 ;;(dumpObject sample-instance3)
 
-;;;;;;;;;;;;;;;;;;;;;;;; Get informed of new Instances
 (defvar *objectInstances*)
 (setf *objectInstances* (list))
-(defmethod make-instance
-  :after ((object sample-class) &rest
-	  initargs)(declare (ignore initargs))(print object)(append object *objectInstances*))
-(find-class 'sample-class)
-;;(print *objectInstances*)
+  initargs)(declare (ignore initargs))(print object)(append object *objectInstances*))
 
-;;(sb-mop:class-direct-subclasses (find-class 'standard-object)) ;;; Retrieve all subclasses of the standard-object
-
-;;(let ((lst ()))
-;;  (do-all-symbols (s lst)
-;;    (push s lst))
-;;  (print lst))
-;;
-;;
-;;(let ((lst ()) )
-;;  (do-all-symbols (s lst)
-;;    (push (class-of s) lst))
-;;  ;(print lst)
-;;  (with-open-file (stream "/tmp/symbolDump.txt" :direction :output)
-;;    (princ lst stream))
-;;  )
-;;
-;;(class-of sample-instance)
-
-
-
-;;;;;;;;;;;;;;;;;;;;;;;; Cl-Fuse Tinkering
+;;;;;;;;;;;;;;;;;;;;;;;; Cl-Fuse
 (ql:quickload "cl-fuse")
 (ql:quickload :split-sequence) 
   (ql:quickload "FLEXI-STREAMS")
@@ -114,7 +82,6 @@
 (defun is-directory (split-path)
   (print "-------------------------- IS-DIRECTORY:")
   (defparameter *dir-split-path* split-path)
-  ;;(print (concatenate 'string "Split-Path Length: " (write-to-string (length *dir-split-path*))))
   (defparameter *dir-current-object* (first (remove-if-not #'(lambda (object)
 							   (cond
 							    ((equal (second split-path) (write-to-string object)) t)
@@ -122,8 +89,8 @@
 						       *fuse-objects*)))
 	
   (or (null *dir-split-path*) ;; Return true for root directory
-      (equalp (car *dir-split-path*) "") ;; Return true for empty directory
-      (> 3 (length *dir-split-path*)) ;; Reutrn true for first and second stage
+		(equalp (car *dir-split-path*) "") ;; Return true for empty directory
+		(> 3 (length *dir-split-path*)) ;; Reutrn true for first and second stage
 		(and 
 			(= (length *dir-split-path*) 3)
 			(slot-boundp *dir-current-object* (intern (car (last split-path)))) ;; Return false for unbound slot values
@@ -389,7 +356,6 @@ t)
 	;; Only normal files are writable
   (print "-------------------------- IS-writeable:")
   (if (and (not (is-directory split-path)) (not (is-symlink split-path))) t nil)
-  
 )
 
 (defun file-flush (path fh)
@@ -427,11 +393,11 @@ t)
 (defun fuse-test (basePath)
   (defparameter *fuse-base-path* (cdr (split-sequence:split-sequence #\/ basePath)))
   (defparameter *fuse-objects* nil)
+  ;; Unmount directory if needed and ensure directory exists
   (run-program "/bin/umount"
-	       '()
-	       :input "/tmp/mytest"
+	       '("/tmp/mytest")
 	       :output *standard-output*)
-  (ensure-directories-exist "/tmp/mytest")
+  (ensure-directories-exist "/tmp/mytest/")
   ;; Execute Fuse-Run in separate thread to run async
   (sb-thread::make-thread (lambda ()
 			    (fuse-run '("none" "/tmp/mytest" "-d")
@@ -474,7 +440,6 @@ t)
   (SomeString SomeInteger SomeList SomeObject))
 (add-fuse-object (list (make-instance 'sample-class3))
 (print "THIS IS THE END OF FILE")
-
 
 
 
