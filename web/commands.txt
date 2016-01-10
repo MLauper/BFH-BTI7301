@@ -1,3 +1,6 @@
+sbcl
+umount /tmp/mytest
+
 (file-size nil)
 (directory-content nil)
 

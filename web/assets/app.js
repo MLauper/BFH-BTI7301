@@ -5,17 +5,32 @@ var thefuseproject;
     
     function AppViewModel($scope, $http, apiRootUrl) {
         var self = this;
+        self.rootEntry = new Entry(null, "", function() { return isDir(""); });
+        
+        self.expand = function(entry) {
+            entry.expanded = true;
+            listDir(entry.fullname).then(function(res) {
+                Array.prototype.push.apply(entry.entries, createListEntries(entry, res));
+            });
+        };
+        
+        self.collapse = function(entry) {
+            entry.expanded = false;
+            entry.entries = [];
+        };
+        
+        self.expand(self.rootEntry);
 
-        listDir("");
-        listDir("#<STANDARD-CLASS THEFUSEPROJECT::SAMPLE-CLASS2>");
-        listDir("#<STANDARD-CLASS THEFUSEPROJECT::SAMPLE-CLASS2>/#<THEFUSEPROJECT::SAMPLE-CLASS2 {1003CBDCD3}>");
-        isDir  ("#<STANDARD-CLASS THEFUSEPROJECT::SAMPLE-CLASS2>");
-        isDir  ("#<STANDARD-CLASS THEFUSEPROJECT::SAMPLE-CLASS2>/#<THEFUSEPROJECT::SAMPLE-CLASS2 {1003CBDCD3}>");
-        isDir  ("#<STANDARD-CLASS THEFUSEPROJECT::SAMPLE-CLASS2>/#<THEFUSEPROJECT::SAMPLE-CLASS2 {1003CBDCD3}>/THEFUSEPROJECT::SOMEINTEGER");
-        isDir  ("#<STANDARD-CLASS THEFUSEPROJECT::SAMPLE-CLASS2>/#<THEFUSEPROJECT::SAMPLE-CLASS2 {1003CBDCD3}>/THEFUSEPROJECT::SOMEFALSEBOOLEAN");
-        isDir  ("#<STANDARD-CLASS THEFUSEPROJECT::SAMPLE-CLASS2>/#<THEFUSEPROJECT::SAMPLE-CLASS2 {1003CBDCD3}>/THEFUSEPROJECT::SOMEOBJECT");
-        isDir  ("#<STANDARD-CLASS THEFUSEPROJECT::SAMPLE-CLASS2>/#<THEFUSEPROJECT::SAMPLE-CLASS2 {1003CBDCD3}>/THEFUSEPROJECT::SOMELIST");
-
+        function isDir(path) {
+            return $http({
+                url: apiRootUrl + '/is-dir/' + thefuseproject.normalizePath(path),
+                method: 'GET',
+                timeout: 200
+            })
+            .then(thefuseproject.mapData)
+            .catch(function() { return false });
+        }
+        
         function listDir(path) {
             return $http({
                 url: apiRootUrl + '/list-dir/' + thefuseproject.normalizePath(path),
@@ -24,15 +39,39 @@ var thefuseproject;
             .then(thefuseproject.mapData);
         }
         
-        function isDir(path) {
-            return $http({
-                url: apiRootUrl + '/is-dir/' + thefuseproject.normalizePath(path),
-                method: 'GET',
-                timeout: 200
-            })
-            .then(thefuseproject.mapData)
-            .catch(function() { return false })
-            .then(function(v) { console.log(path, v); });
+        function createListEntries(parent, filenames) {
+            if (!filenames) {
+                return [];
+            }
+            else {
+                return filenames.map(function(filename) { 
+                    return new Entry(parent, filename, isDir);
+                });
+            }
+        }
+    }
+    
+    function Entry(parent, filename, isDir) {
+        var self = this;
+        
+        this.name = filename;
+        this.fullname = getFullname();
+        this.isDir = null;
+        this.depth = parent ? parent.depth + 1 : 0;
+        this.entries = [];
+        this.expanded = false;
+            
+        isDir(this.fullname).then(function(r) {
+            self.isDir = r; 
+        });
+        
+        function getFullname() {
+            if (parent == null || !parent.fullname) {
+                return filename;
+            }
+            else {
+                return parent.fullname + "/" + filename ;
+            }
         }
     }
     
@@ -63,8 +102,6 @@ var thefuseproject;
         });
 
     thefuseproject.mapData = function (promise) {
-        console.log(promise.data);
-        
         return promise.data;  
     };
     
@@ -75,6 +112,5 @@ var thefuseproject;
         
         return encodeURIComponent(path);
     };
-
 
 })(thefuseproject || (thefuseproject = {}));

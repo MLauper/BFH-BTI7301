@@ -415,8 +415,6 @@ t)
 
 @route app "/api/is-dir/:path"
 (defview is-dir (path)
-	(print "-------------------------- FILXASDASDASD-FLUSH")
-	(print (do-urlencode:urldecode path))
 	(respond (cl-json:encode-json-to-string 
 		(is-directory 
 			(if (string= "#" (do-urlencode:urldecode path)) 

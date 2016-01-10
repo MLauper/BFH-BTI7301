@@ -7,8 +7,8 @@
     <meta charset="utf-8" />
 
     <link type="text/css" rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" />
-    <link type="text/css" rel="stylesheet" href="http://fonts.googleapis.com/css?family=Merriweather:400,300,300italic,400italic,700,700italic,900,900italic" />
-    <link type="text/css" rel="stylesheet" href="http://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800" />
+    <link type="text/css" rel="stylesheet" href="https://fonts.googleapis.com/css?family=Merriweather:400,300,300italic,400italic,700,700italic,900,900italic" />
+    <link type="text/css" rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800" />
     <link type="text/css" rel="stylesheet" href="app.css" />
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.4.7/angular.js"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.4.7/angular-animate.js"></script>
@@ -68,16 +68,32 @@
     
     <main ng-cloak>
         <div class="container">
-            <h1>Hallo</h1>
-            asdasdasd
-            asd
-            a
-            da
-            sd
+            <h1>FUSE</h1>
+            <div ng-repeat="entry in app.rootEntry.entries">
+                <div ng-include="'entry.html'" />
+            </div>
         </div>
     </main>
     
     <footer>
     </footer>
+    <script type="text/ng-template" id="entry.html">
+        <span ng-if="entry.isDir === true && !entry.expanded" ng-click="app.expand(entry)">
+            <span class="glyphicon glyphicon-chevron-right"></span> 
+        </span>
+        <span ng-if="entry.isDir === true && entry.expanded" ng-click="app.collapse(entry)">
+            <span class="glyphicon glyphicon-chevron-down"></span> 
+        </span>
+        <span ng-if="entry.isDir === false">
+            <span class="glyphicon glyphicon-file"></span> 
+        </span>
+        <span ng-if="entry.isDir === null">
+            <span class="glyphicon glyphicon-transfer"></span> 
+        </span>
+        {{entry.name}}
+        <div ng-repeat="entry in entry.entries">
+            <div ng-include="'entry.html'" style="margin-left: 16px" />
+        </div>
+    </script>
 </body>
 </html>
