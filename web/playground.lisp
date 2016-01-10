@@ -421,16 +421,18 @@ t)
 ;;; Views	
 @route app "/api/list-directory/:path"
 (defview list-directory (path)
-  (respond (cl-json:encode-json-to-string 
-	(directory-content 
-		(split-sequence:SPLIT-SEQUENCE #\/ (do-urlencode:urldecode path))))
+	(respond (cl-json:encode-json-to-string 
+		(directory-content 
+			(if (string= "#" (do-urlencode:urldecode path)) 
+				nil
+				(split-sequence:SPLIT-SEQUENCE #\/ (do-urlencode:urldecode path)))))
 	 :type "application/json"))
 
 @route app "/"
 (defview index ()
   (redirect "/w/index.html"))
-
   
+
   
 ;; ************************************************************
 ;;  Run
