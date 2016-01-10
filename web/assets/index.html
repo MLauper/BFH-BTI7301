@@ -1,49 +1,82 @@
 <!DOCTYPE html>
 <html ng-app="thefuseproject">
 <head>
-    <title>the FUSE project</title>
+    <title>thefuseproject</title>
     <meta http-equiv="X-UA-Compatible" content="IE=9; IE=10; IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta charset="utf-8" />
 
     <link type="text/css" rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" />
-    <link type="text/css" rel="stylesheet" href="index.css" />
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.4/jquery.js"></script>
+    <link type="text/css" rel="stylesheet" href="http://fonts.googleapis.com/css?family=Merriweather:400,300,300italic,400italic,700,700italic,900,900italic" />
+    <link type="text/css" rel="stylesheet" href="http://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800" />
+    <link type="text/css" rel="stylesheet" href="app.css" />
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.4.7/angular.js"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.4.7/angular-animate.js"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.4.7/i18n/angular-locale_de-ch.js"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/angular-ui-bootstrap/0.14.2/ui-bootstrap-tpls.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/angular-ui-router/0.2.15/angular-ui-router.js"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.10.6/moment.js"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.10.6/locale/de.js"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/rxjs/4.0.6/rx.all.js"></script>
-    <script type="text/javascript" src="index.js"></script>
-    <script type="text/javascript">
-        if (window.console === undefined) {
-            window.console = { log: function () { }, info: function () { }, warn: function () { }, error: function () { } };
-        }
-    </script>
+    <script type="text/javascript" src="app.js"></script>
 </head>
-<body ng-controller="IndexViewModel as ivm">
+
+<body ng-controller="AppViewModel as app">
+    <nav class="navbar navbar-default navbar-fixed-top">
+        <div class="container">
+            <div class="navbar-header">
+                <a class="navbar-brand page-scroll" href="#">
+                    <img id="logo" src="img/logo.png">
+                </a>
+                <button type="button" class="btn btn-navbar navbar-toggle"
+                        ng-click="navbarCollapsed = !navbarCollapsed">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+            </div>
+            <div class="navbar-right nav-collapse collapse" 
+                 uib-collapse="navbarCollapsed">
+                <p class="navbar-text"
+                   ng-show="app.userAuthenticated">
+                    {{'SignedInAs'}} {{app.userName}}
+                    (<a href="#" ng-click="app.logout()">{{'logout'}}</a>)
+                </p>
+                <ul class="nav navbar-nav">
+                    <li ui-sref-active="active">
+                        <a href ui-sref="overview">{{'overview'}}</a>
+                    </li>
+                    <li ui-sref-active="active"
+                        ng-show="app.userAuthenticated">
+                        <a href ui-sref="basket">{{'basket'}}</a>
+                    </li>
+                    <li ui-sref-active="active"
+                        ng-hide="app.userAuthenticated">
+                        <a href ui-sref="user-register">{{'register'}}</a>
+                    </li>
+                    <li ui-sref-active="active"
+                        ng-hide="app.userAuthenticated">
+                        <a href ui-sref="user-login">{{'login'}}</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+        
     <header>
-        <div id="banner" role="banner" class="relative">
-            <img id="logo" src="logo.png" />
-        </div>
-        <div id="main-app-bar" ng-cloak>
-            <div class="container">
-                <div class="pull-left">
-                    <h1 id="page-header">Da FUCK</h1>
-                </div>
-             </div> 
-        </div>
     </header>
-
-    <main class="container" ng-cloak>
-        <ui-view/>
-		{{result.data}}
-		{{result2.data}}
+    
+    <main ng-cloak>
+        <div class="container">
+            <h1>Hallo</h1>
+            asdasdasd
+            asd
+            a
+            da
+            sd
+        </div>
     </main>
-
+    
     <footer>
     </footer>
 </body>
