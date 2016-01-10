@@ -61,8 +61,7 @@
 
 (defvar *objectInstances*)
 (setf *objectInstances* (list))
-  initargs)(declare (ignore initargs))(print object)(append object *objectInstances*))
-
+  
 ;;;;;;;;;;;;;;;;;;;;;;;; Cl-Fuse
 (ql:quickload "cl-fuse")
 (ql:quickload :split-sequence) 
@@ -394,7 +393,7 @@ t)
   (defparameter *fuse-base-path* (cdr (split-sequence:split-sequence #\/ basePath)))
   (defparameter *fuse-objects* nil)
   ;; Unmount directory if needed and ensure directory exists
-  (run-program "/usr/bin/fusermount"
+  (run-program "/bin/fusermount"
 	       '("-u" "/tmp/mytest")
 	       :output *standard-output*)
   (ensure-directories-exist "/tmp/mytest/")
@@ -438,7 +437,7 @@ t)
 
 (defclass sample-class3 ()
   (SomeString SomeInteger SomeList SomeObject))
-(add-fuse-object (list (make-instance 'sample-class3))
+(add-fuse-object (list (make-instance 'sample-class3)))
 (print "THIS IS THE END OF FILE")
 
 
