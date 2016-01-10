@@ -1,6 +1,11 @@
 sbcl
 umount /tmp/mytest
 
+(defclass Loooal ()
+	(SomeString SomeInteger SomeList SomeObject))
+(add-fuse-object (list (make-instance 'Loooal)))
+
+
 (file-size nil)
 (directory-content nil)
 

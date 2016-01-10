@@ -88,7 +88,6 @@
 (use-package 'cl-utilities)
 
 (defun is-directory (split-path)
-  (print "-------------------------- IS-DIRECTORY:")
   (defparameter *dir-split-path* split-path)
   (defparameter *dir-current-object* (first (remove-if-not #'(lambda (object)
 							   (cond
@@ -157,8 +156,6 @@
 )
 
 (defun directory-content (split-path)
-  (print "-------------------------- DIRECTORY-CONTENT:")
-
   (cond
    ((= (length split-path) 0)
     (remove-duplicates (mapcar #'(lambda (object)
@@ -464,6 +461,9 @@ t)
 (defun add-fuse-object (object)
   (setq *fuse-objects* (append *fuse-objects* object)))
 
+(defclass sample-class3 ()
+	(SomeString SomeInteger SomeList SomeObject))
+	
 (defparameter sample-instance3 (make-instance 'sample-class2))
 (setf (slot-value sample-instance3 'SomeString) "Sample Content with several byte size...")
 (setf (slot-value sample-instance3 'SomeInteger) 42)
@@ -473,6 +473,5 @@ t)
 (setf (slot-value sample-instance3 'SomeObject) sample-instance2)
 (add-fuse-object (list sample-instance3))
 (add-fuse-object (list sample-instance sample-instance2))
-(defclass sample-class3 ()
-(SomeString SomeInteger SomeList SomeObject))
 (add-fuse-object (list (make-instance 'sample-class3)))
+(add-fuse-object (list (make-instance 'sample-class2)))

@@ -3,19 +3,24 @@
 var thefuseproject;
 (function (thefuseproject) {
     
-    function AppViewModel($scope, $http, apiRootUrl) {
+    function AppViewModel($scope, $http, $timeout, apiRootUrl) {
         var self = this;
         self.rootEntry = new Entry(null, "", function() { return isDir(""); });
+        self.rootEntry.refreshing(addMissingChilds, $timeout);
         
         self.expand = function(entry) {
             entry.expanded = true;
             listDir(entry.fullname).then(function(res) {
-                Array.prototype.push.apply(entry.entries, createListEntries(entry, res));
+                Array.prototype.push.apply(entry.entries, createListEntries(entry, res, true));
             });
         };
         
         self.collapse = function(entry) {
             entry.expanded = false;
+            entry.entries.forEach(function(e) { 
+                e.refreshing(false, $timeout);
+                self.collapse(e);
+            });
             entry.entries = [];
         };
         
@@ -39,20 +44,43 @@ var thefuseproject;
             .then(thefuseproject.mapData);
         }
         
-        function createListEntries(parent, filenames) {
+        function createListEntries(parent, filenames, autoRefresh) {
             if (!filenames) {
-                return [];
+                filenames = [];
             }
-            else {
-                return filenames.map(function(filename) { 
+            
+            return filenames.map(function(filename) { 
+                if (autoRefresh) {
+                    var entry = new Entry(parent, filename, isDir);
+                    entry.refreshing(addMissingChilds, $timeout);
+                    return entry;
+                }
+                else {
                     return new Entry(parent, filename, isDir);
-                });
+                }
+            });
+        }
+        
+        function addMissingChilds(parent) {
+            if (!parent.expanded) {
+                return;
             }
+            
+            listDir(parent.fullname).then(function(filenames) {
+                createListEntries(parent, filenames, false).forEach(function(childToRefresh) {
+                    var child = parent.entries.filter(function(c) { return c.fullname == childToRefresh.fullname});
+                    if (child.length == 0) {
+                        childToRefresh.refreshing(addMissingChilds, $timeout);
+                        parent.entries.push(childToRefresh);
+                    }
+                });
+            });
         }
     }
     
     function Entry(parent, filename, isDir) {
         var self = this;
+        var refreshingFun = function() {};
         
         this.name = filename;
         this.fullname = getFullname();
@@ -60,6 +88,17 @@ var thefuseproject;
         this.depth = parent ? parent.depth + 1 : 0;
         this.entries = [];
         this.expanded = false;
+        
+        this.refreshing = function(action, $timeout) {
+            if (action) {
+                $timeout.cancel(refreshingFun);
+                refreshingFun = $timeout(function() { action(self); self.refreshing(action, $timeout); }, 5000);
+            }
+            else {
+                $timeout.cancel(refreshingFun);
+                refreshingFun = function() {};
+            }
+        };
             
         isDir(this.fullname).then(function(r) {
             self.isDir = r; 
