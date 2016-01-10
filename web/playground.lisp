@@ -1,3 +1,6 @@
+;;;; BFH-BTI7301.lisp
+
+(declaim (optimize (speed 0) (safety 3) (debug 3)))
 (ql:quickload 'asdf)
 (ql:quickload 'LUCERNE)
 (ql:quickload 'cl-json)
@@ -10,11 +13,7 @@
 (in-package :thefuseproject)
 (annot:enable-annot-syntax)
 
-
-
-;; ************************************************************
-;;  Model
-;; ************************************************************
+(print "Starting BTI7301 Project File")
 
 (defclass sample-class ()
   (slotA slotB slotC))
@@ -25,11 +24,11 @@
 (defgeneric dumpObject
   (object)
   (:documentation "Dump a random object into a file)"))
-  
+
 (defmethod dumpObject
   (object)
   (defparameter slots (mapcar #'sb-pcl:slot-definition-name (sb-pcl:class-slots (class-of object))))
-  ;;(print slots)
+
   (defparameter basePath (concatenate 'string
 				      "/tmp/newDir/"
 				      (write-to-string (class-of object))
@@ -67,22 +66,18 @@
 (setf (slot-value sample-instance3 'SomeList) (list 1 2 3))
 (setf (slot-value sample-instance3 'SomeObject) sample-instance2)
 
-;;;;;;;;;;;;;;;;;;;;;;;; Get informed of new Instances
 (defvar *objectInstances*)
 (setf *objectInstances* (list))
 (defmethod make-instance
   :after ((object sample-class) &rest
-	  initargs)(declare (ignore initargs))(print object)(append object *objectInstances*))
+  initargs)(declare (ignore initargs))(print object)(append object *objectInstances*))
 
-
-
-;; ************************************************************
-;;  FUSE
-;; ************************************************************
-
+;;;;;;;;;;;;;;;;;;;;;;;; Cl-Fuse
 (ql:quickload "cl-fuse")
 (ql:quickload :split-sequence) 
-(ql:quickload "FLEXI-STREAMS")
+  (ql:quickload "FLEXI-STREAMS")
+;;(ensure-directories-exist "/tmp/testFuseEmpty/")
+;;(cl-fuse:fuse-run '("none" "-d" "/tmp/testFuseEmpty"))
 
 (require 'cl-fuse)
 (require 'cffi)
@@ -95,7 +90,6 @@
 (defun is-directory (split-path)
   (print "-------------------------- IS-DIRECTORY:")
   (defparameter *dir-split-path* split-path)
-  ;;(print (concatenate 'string "Split-Path Length: " (write-to-string (length *dir-split-path*))))
   (defparameter *dir-current-object* (first (remove-if-not #'(lambda (object)
 							   (cond
 							    ((equal (second split-path) (write-to-string object)) t)
@@ -103,8 +97,8 @@
 						       *fuse-objects*)))
 	
   (or (null *dir-split-path*) ;; Return true for root directory
-      (equalp (car *dir-split-path*) "") ;; Return true for empty directory
-      (> 3 (length *dir-split-path*)) ;; Reutrn true for first and second stage
+		(equalp (car *dir-split-path*) "") ;; Return true for empty directory
+		(> 3 (length *dir-split-path*)) ;; Reutrn true for first and second stage
 		(and 
 			(= (length *dir-split-path*) 3)
 			(slot-boundp *dir-current-object* (intern (car (last split-path)))) ;; Return false for unbound slot values
@@ -159,13 +153,12 @@
 	(defparameter *fuse-symlink-instance* (remove-duplicates (mapcar #'(lambda (object) (write-to-string object)) (remove-if-not #'(lambda (object) (cond ((equal (write-to-string *fuse-symlink*) (write-to-string  object)) t) (t nil))) *fuse-objects*)) :test #'equal))
 	
 	(append *fuse-base-path* *fuse-symlink-class* *fuse-symlink-instance*)
+	
 )
 
 (defun directory-content (split-path)
   (print "-------------------------- DIRECTORY-CONTENT:")
-  (format t "The value is XX~aXXX" split-path)
-  (format t "FAYY" "GAY")
-  
+
   (cond
    ((= (length split-path) 0)
     (remove-duplicates (mapcar #'(lambda (object)
@@ -248,7 +241,7 @@
 	((equal (write-to-string (class-of *fuse-symbol-content*)) "#<BUILT-IN-CLASS COMMON-LISP:NULL>") 3)
 	(t 99)
 	)
-)
+   )
 
 (defun file-read (split-path size offset fh)
   (declare (ignore fh))
@@ -278,7 +271,7 @@
 	))
 	
 	(append '(:offset 0) (list (write-to-string *fuse-symbol-content*)))
-)
+  )
 
 (defun is-executable (split-path)
   (declare (ignore split-path))
@@ -370,7 +363,8 @@ t)
   (declare (ignore split-path))
 	;; Only normal files are writable
   (print "-------------------------- IS-writeable:")
-  (if (and (not (is-directory split-path)) (not (is-symlink split-path))) t nil))
+  (if (and (not (is-directory split-path)) (not (is-symlink split-path))) t nil)
+)
 
 (defun file-flush (path fh)
   (print "-------------------------- FILE-FLUSH")
@@ -403,24 +397,15 @@ t)
 (defun symlink (path content)
   (print "-------------------------- SYMLINK")
   (- error-EACCES))
-
-(defun add-fuse-object (object)
-  (setq *fuse-objects* (append *fuse-objects* object)))
- 
- 
- 
-;; ************************************************************
-;;  WebApp
-;; ************************************************************
-
+  
+;;;;;;;;;;;;;;;;;;;;;;;; Web API
 (defapp app
   :middlewares ((clack.middleware.static:<clack-middleware-static>
-                 :root "/root/BFH-BTI7301/web/assets/"
+                 :root #p"/root/BFH-BTI7301/web/assets/"
                  :path "/w/")))
 
-;;; Views	
-@route app "/api/list-directory/:path"
-(defview list-directory (path)
+@route app "/api/list-dir/:path"
+(defview list-dir (path)
 	(respond (cl-json:encode-json-to-string 
 		(directory-content 
 			(if (string= "#" (do-urlencode:urldecode path)) 
@@ -428,46 +413,58 @@ t)
 				(split-sequence:SPLIT-SEQUENCE #\/ (do-urlencode:urldecode path)))))
 	 :type "application/json"))
 
+@route app "/api/is-dir/:path"
+(defview is-dir (path)
+	(print "-------------------------- FILXASDASDASD-FLUSH")
+	(print (do-urlencode:urldecode path))
+	(respond (cl-json:encode-json-to-string 
+		(is-directory 
+			(if (string= "#" (do-urlencode:urldecode path)) 
+				nil
+				(split-sequence:SPLIT-SEQUENCE #\/ (do-urlencode:urldecode path)))))
+	 :type "application/json"))
+	 
 @route app "/"
 (defview index ()
   (redirect "/w/index.html"))
-  
-
-  
-;; ************************************************************
-;;  Run
-;; ************************************************************
-
-(defparameter *base-path* '"/tmp/mytest")
-(defparameter *fuse-objects* nil)
-(defparameter *fuse-base-path* (cdr (split-sequence:split-sequence #\/ *base-path*)))
-(ensure-directories-exist "/tmp/mytest")
-
-;; Execute Fuse-Run in separate thread to run async
-(sb-thread::make-thread (lambda ()
-			(fuse-run '("none" "/tmp/mytest" "-d")
-				  :directoryp 'is-directory
-				  :directory-content 'directory-content
-				  :symlink-target 'symlink-target
-				  :file-size 'file-size
-				  :file-read 'file-read
-				  :file-executable-p 'is-executable
-				  :symlinkp 'is-symlink
-				  :file-write 'file-write
-				  :file-write-whole 'file-write-whole
-				  :file-writeable-p 'is-writeable
-				  :file-flush 'file-flush
-				  :file-release 'file-release
-				  :truncate 'file-truncate
-				  :file-create 'file-create
-				  :mkdir 'dir-create
-				  :unlink 'file-remove
-				  :rmdir 'dir-remove
-				  :symlink 'symlink)))
+ 
+(defun fuse-test (basePath)
+  (defparameter *fuse-base-path* (cdr (split-sequence:split-sequence #\/ basePath)))
+  (defparameter *fuse-objects* nil)
+  ;; Unmount directory if needed and ensure directory exists
+  ;;(run-program "/usr/bin/fusermount"
+  ;;	    '("-u" "/tmp/mytest")
+  ;;	    :output *standard-output*)
+  ;;(ensure-directories-exist "/tmp/mytest/")
+  ;; Execute Fuse-Run in separate thread to run async
+  (sb-thread::make-thread (lambda ()
+			    (fuse-run '("none" "/tmp/mytest" "-d")
+				      :directoryp 'is-directory
+				      :directory-content 'directory-content
+				      :symlink-target 'symlink-target
+				      :file-size 'file-size
+				      :file-read 'file-read
+				      :file-executable-p 'is-executable
+				      :symlinkp 'is-symlink
+					  :file-write 'file-write
+				      :file-write-whole 'file-write-whole
+				      :file-writeable-p 'is-writeable
+				      :file-flush 'file-flush
+				      :file-release 'file-release
+				      :truncate 'file-truncate
+				      :file-create 'file-create
+				      :mkdir 'dir-create
+				      :unlink 'file-remove
+				      :rmdir 'dir-remove
+				      :symlink 'symlink)))
+					  
+  (sb-thread::make-thread (lambda ()
+			    (start app))))
 				
-;; Execute Web-App in separate thread to run async				
-(sb-thread::make-thread (lambda ()
-			(start app)))
+(fuse-test "/tmp/mytest")
+
+(defun add-fuse-object (object)
+  (setq *fuse-objects* (append *fuse-objects* object)))
 
 (defparameter sample-instance3 (make-instance 'sample-class2))
 (setf (slot-value sample-instance3 'SomeString) "Sample Content with several byte size...")
@@ -479,5 +476,5 @@ t)
 (add-fuse-object (list sample-instance3))
 (add-fuse-object (list sample-instance sample-instance2))
 (defclass sample-class3 ()
-  (SomeString SomeInteger SomeList SomeObject))
+(SomeString SomeInteger SomeList SomeObject))
 (add-fuse-object (list (make-instance 'sample-class3)))
