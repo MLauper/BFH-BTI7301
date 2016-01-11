@@ -393,8 +393,8 @@ t)
   (defparameter *fuse-base-path* (cdr (split-sequence:split-sequence #\/ basePath)))
   (defparameter *fuse-objects* nil)
   ;; Unmount directory if needed and ensure directory exists
-  (run-program "/bin/fusermount"
-	       '("-u" "/tmp/mytest")
+  (run-program "/bin/sh"
+               '("-c" "fusermount -u /tmp/mytest")
 	       :output *standard-output*)
   (ensure-directories-exist "/tmp/mytest/")
   ;; Execute Fuse-Run in separate thread to run async
