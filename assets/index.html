@@ -90,6 +90,9 @@
         <span ng-if="entry.isDir === null">
             <span class="glyphicon glyphicon-transfer"></span> 
         </span>
+        <span ng-if="entry.isSymLink === true">
+            <span class="glyphicon glyphicon-arrow-right"></span> 
+        </span>
         {{entry.name}}
         <div ng-repeat="entry in entry.entries">
             <div ng-include="'entry.html'" style="margin-left: 16px" />

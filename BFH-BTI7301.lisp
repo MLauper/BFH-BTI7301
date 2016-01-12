@@ -116,8 +116,6 @@
 )
 
 (defun symlink-target (split-path)
-  (print "-------------------------- SYMLINK-TARGET:")
-	
 	(defparameter *split-path* split-path)
 	(defparameter *list-path* (cdr (cdr *split-path*)))
 	(defparameter *current-object* (first (remove-if-not #'(lambda (object) (cond ((equal (second *split-path*) (write-to-string object)) t) (t nil))) *fuse-objects*)))
@@ -142,7 +140,6 @@
 	(defparameter *fuse-symlink-instance* (remove-duplicates (mapcar #'(lambda (object) (write-to-string object)) (remove-if-not #'(lambda (object) (cond ((equal (write-to-string *fuse-symlink*) (write-to-string  object)) t) (t nil))) *fuse-objects*)) :test #'equal))
 	
 	(append *fuse-base-path* *fuse-symlink-class* *fuse-symlink-instance*)
-	
 )
 
 (defun directory-content (split-path)
@@ -227,8 +224,7 @@
 	((equal (write-to-string (class-of *fuse-symbol-content*)) "#<BUILT-IN-CLASS COMMON-LISP:SYMBOL>") 1)
 	((equal (write-to-string (class-of *fuse-symbol-content*)) "#<BUILT-IN-CLASS COMMON-LISP:NULL>") 3)
 	(t 99)
-	)
-   )
+	))
 
 (defun file-read (split-path size offset fh)
   (declare (ignore fh))
@@ -266,7 +262,6 @@
   (= 1 2))
 
 (defun is-symlink (split-path)
-  (print "-------------------------- IS-SYMLINK:")
   (and 
 	(> (length split-path) 2)
 	(progn
@@ -407,6 +402,15 @@ t)
 (defview is-dir (path)
 	(respond (cl-json:encode-json-to-string 
 		(is-directory 
+			(if (string= "#" (do-urlencode:urldecode path)) 
+				nil
+				(split-sequence:SPLIT-SEQUENCE #\/ (do-urlencode:urldecode path)))))
+	 :type "application/json"))
+	 
+@route app "/api/is-sylnk/:path"
+(defview is-sylnk (path)
+	(respond (cl-json:encode-json-to-string 
+		(is-symlink 
 			(if (string= "#" (do-urlencode:urldecode path)) 
 				nil
 				(split-sequence:SPLIT-SEQUENCE #\/ (do-urlencode:urldecode path)))))

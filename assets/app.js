@@ -5,7 +5,7 @@ var thefuseproject;
     
     function AppViewModel($scope, $http, $timeout, apiRootUrl) {
         var self = this;
-        self.rootEntry = new Entry(null, "", function() { return isDir(""); });
+        self.rootEntry = new Entry(null, "", function() { return isDir(""); }, function() { return isSymLink(""); });
         self.rootEntry.refreshing(addMissingChilds, $timeout);
         
         self.expand = function(entry) {
@@ -33,7 +33,17 @@ var thefuseproject;
                 timeout: 200
             })
             .then(thefuseproject.mapData)
-            .catch(function() { return false });
+            .then(function(res) { return res === true; });
+        }
+        
+        function isSymLink(path) {
+            return $http({
+                url: apiRootUrl + '/is-sylnk/' + thefuseproject.normalizePath(path),
+                method: 'GET',
+                timeout: 200
+            })
+            .then(thefuseproject.mapData)
+            .then(function(res) { return res === true; });
         }
         
         function listDir(path) {
@@ -51,17 +61,19 @@ var thefuseproject;
             
             return filenames.map(function(filename) { 
                 if (autoRefresh) {
-                    var entry = new Entry(parent, filename, isDir);
+                    var entry = new Entry(parent, filename, isDir, isSymLink);
                     entry.refreshing(addMissingChilds, $timeout);
                     return entry;
                 }
                 else {
-                    return new Entry(parent, filename, isDir);
+                    return new Entry(parent, filename, isDir, isSymLink);
                 }
             });
         }
         
         function addMissingChilds(parent) {
+            return;
+            
             if (!parent.expanded) {
                 return;
             }
@@ -78,13 +90,14 @@ var thefuseproject;
         }
     }
     
-    function Entry(parent, filename, isDir) {
+    function Entry(parent, filename, isDir, isSymLink) {
         var self = this;
         var refreshingFun = function() {};
         
         this.name = filename;
         this.fullname = getFullname();
         this.isDir = null;
+        this.isSymLink = null;
         this.depth = parent ? parent.depth + 1 : 0;
         this.entries = [];
         this.expanded = false;
@@ -102,6 +115,10 @@ var thefuseproject;
             
         isDir(this.fullname).then(function(r) {
             self.isDir = r; 
+        });
+        
+        isSymLink(this.fullname).then(function(r) {
+            self.isSymLink = r; 
         });
         
         function getFullname() {
