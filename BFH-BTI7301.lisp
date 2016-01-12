@@ -1,10 +1,18 @@
 ;;;; BFH-BTI7301.lisp
 
 (declaim (optimize (speed 0) (safety 3) (debug 3)))
-(ql:quickload "cl-fuse")
-(ql:quickload "Lucerne")
-(require 'cl-fuse)
+(ql:quickload 'cl-fuse)
+(ql:quickload 'asdf)
+(ql:quickload 'Lucerne)
+(ql:quickload 'cl-json)
+(ql:quickload 'do-urlencode)
 
+(in-package :cl-user)
+(defpackage thefuseproject
+  (:use :cl :lucerne)
+  (:export :app))
+(in-package :thefuseproject)
+(annot:enable-annot-syntax)
 (print "Starting BTI7301 Project File")
 
 (defclass sample-class ()
@@ -44,20 +52,17 @@
 (setf (slot-value sample-instance 'slotA) "A")
 (setf (slot-value sample-instance 'slotB) "B")
 (setf (slot-value sample-instance 'slotC) "C")
-;;(dumpObject sample-instance)
 
 (defparameter sample-instance2 (make-instance 'sample-class))
 (setf (slot-value sample-instance2 'slotA) 1)
 (setf (slot-value sample-instance2 'slotB) 2)
 (setf (slot-value sample-instance2 'slotC) 3)
-;;(dumpObject sample-instance2)
 
 (defparameter sample-instance3 (make-instance 'sample-class2))
 (setf (slot-value sample-instance3 'SomeString) "Sample Content")
 (setf (slot-value sample-instance3 'SomeInteger) 42)
 (setf (slot-value sample-instance3 'SomeList) (list 1 2 3))
 (setf (slot-value sample-instance3 'SomeObject) sample-instance2)
-;;(dumpObject sample-instance3)
 
 (defvar *objectInstances*)
 (setf *objectInstances* (list))
@@ -73,13 +78,11 @@
 (require 'cffi)
 (require 'cl-utilities)
 
-
 (use-package 'cl-fuse)
 (use-package 'cffi)
 (use-package 'cl-utilities)
 
 (defun is-directory (split-path)
-  (print "-------------------------- IS-DIRECTORY:")
   (defparameter *dir-split-path* split-path)
   (defparameter *dir-current-object* (first (remove-if-not #'(lambda (object)
 							   (cond
@@ -148,8 +151,6 @@
 )
 
 (defun directory-content (split-path)
-  (print "-------------------------- DIRECTORY-CONTENT:")
-
   (cond
    ((= (length split-path) 0)
     (remove-duplicates (mapcar #'(lambda (object)
@@ -389,6 +390,34 @@ t)
   (print "-------------------------- SYMLINK")
   (- error-EACCES))
 
+;;;;;;;;;;;;;;;;;;;;;;;; Web API
+(defapp app
+  :middlewares ((clack.middleware.static:<clack-middleware-static>
+                 :root #p"/root/BFH-BTI7301/web/assets/"
+                 :path "/w/")))
+
+@route app "/api/list-dir/:path"
+(defview list-dir (path)
+	(respond (cl-json:encode-json-to-string 
+		(directory-content 
+			(if (string= "#" (do-urlencode:urldecode path)) 
+				nil
+				(split-sequence:SPLIT-SEQUENCE #\/ (do-urlencode:urldecode path)))))
+	 :type "application/json"))
+
+@route app "/api/is-dir/:path"
+(defview is-dir (path)
+	(respond (cl-json:encode-json-to-string 
+		(is-directory 
+			(if (string= "#" (do-urlencode:urldecode path)) 
+				nil
+				(split-sequence:SPLIT-SEQUENCE #\/ (do-urlencode:urldecode path)))))
+	 :type "application/json"))
+	 
+@route app "/"
+(defview index ()
+  (redirect "/w/index.html"))
+  
 (defun fuse-test (basePath)
   (defparameter *fuse-base-path* (cdr (split-sequence:split-sequence #\/ basePath)))
   (defparameter *fuse-objects* nil)
@@ -417,7 +446,11 @@ t)
 				      :mkdir 'dir-create
 				      :unlink 'file-remove
 				      :rmdir 'dir-remove
-				      :symlink 'symlink))))
+				      :symlink 'symlink)))
+					  
+  (sb-thread::make-thread (lambda ()
+			    (start app))))
+				
 
 (defun add-fuse-object (object)
   (setq *fuse-objects* (append *fuse-objects* object)))
@@ -438,22 +471,4 @@ t)
 (defclass sample-class3 ()
   (SomeString SomeInteger SomeList SomeObject))
 (add-fuse-object (list (make-instance 'sample-class3)))
-(print "THIS IS THE END OF FILE")
 
-
-
-
-
-
-
-
-
-
-
-
-(defapp app)
-@route app "/"
-(defview index ()
-  (respond "<h1>Welcome to Lucerne</h1>"))
-  
-(start app)
