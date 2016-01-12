@@ -393,7 +393,7 @@ t)
 ;;;;;;;;;;;;;;;;;;;;;;;; Web API
 (defapp app
   :middlewares ((clack.middleware.static:<clack-middleware-static>
-                 :root #p"/root/BFH-BTI7301/web/assets/"
+                 :root #p"/root/BFH-BTI7301/assets/"
                  :path "/w/")))
 
 @route app "/api/list-dir/:path"
@@ -421,11 +421,13 @@ t)
 (defun fuse-test (basePath)
   (defparameter *fuse-base-path* (cdr (split-sequence:split-sequence #\/ basePath)))
   (defparameter *fuse-objects* nil)
+  
   ;; Unmount directory if needed and ensure directory exists
-  (run-program "/bin/sh"
+  (sb-ext:run-program "/bin/sh"
                '("-c" "fusermount -u /tmp/mytest")
 	       :output *standard-output*)
   (ensure-directories-exist "/tmp/mytest/")
+  
   ;; Execute Fuse-Run in separate thread to run async
   (sb-thread::make-thread (lambda ()
 			    (fuse-run '("none" "/tmp/mytest" "-d")
@@ -451,11 +453,11 @@ t)
   (sb-thread::make-thread (lambda ()
 			    (start app))))
 				
-
 (defun add-fuse-object (object)
   (setq *fuse-objects* (append *fuse-objects* object)))
 
 (fuse-test "/tmp/mytest")
+
 
 (defparameter sample-instance3 (make-instance 'sample-class2))
 (setf (slot-value sample-instance3 'SomeString) "Sample Content with several byte size...")
@@ -465,10 +467,8 @@ t)
 (setf (slot-value sample-instance3 'SomeFalseBoolean) NIL)
 (setf (slot-value sample-instance3 'SomeObject) sample-instance2)
 (add-fuse-object (list sample-instance3))
-
 (add-fuse-object (list sample-instance sample-instance2))
 
 (defclass sample-class3 ()
   (SomeString SomeInteger SomeList SomeObject))
 (add-fuse-object (list (make-instance 'sample-class3)))
-
