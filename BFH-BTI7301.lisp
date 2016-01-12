@@ -7,11 +7,6 @@
 (ql:quickload 'cl-json)
 (ql:quickload 'do-urlencode)
 
-(in-package :cl-user)
-(defpackage thefuseproject
-  (:use :cl :lucerne)
-  (:export :app))
-(in-package :thefuseproject)
 (annot:enable-annot-syntax)
 (print "Starting BTI7301 Project File")
 
@@ -391,6 +386,9 @@ t)
   (- error-EACCES))
 
 ;;;;;;;;;;;;;;;;;;;;;;;; Web API
+(require 'lucerne)
+(use-package 'lucerne)
+
 (defapp app
   :middlewares ((clack.middleware.static:<clack-middleware-static>
                  :root #p"/root/BFH-BTI7301/assets/"
