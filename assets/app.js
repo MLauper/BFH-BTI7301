@@ -1,7 +1,7 @@
 'use strict';
 
-var thefuseproject;
-(function (thefuseproject) {
+var lisptreeview;
+(function (lisptreeview) {
     
     function AppViewModel($scope, $http, $timeout, apiRootUrl) {
         var self = this;
@@ -28,28 +28,28 @@ var thefuseproject;
 
         function isDir(path) {
             return $http({
-                url: apiRootUrl + '/is-dir/' + thefuseproject.normalizePath(path),
+                url: apiRootUrl + '/is-dir/' + lisptreeview.normalizePath(path),
                 method: 'GET'
             })
-            .then(thefuseproject.mapData)
+            .then(lisptreeview.mapData)
             .then(function(res) { return res === true; });
         }
         
         function isSymLink(path) {
             return $http({
-                url: apiRootUrl + '/is-sylnk/' + thefuseproject.normalizePath(path),
+                url: apiRootUrl + '/is-sylnk/' + lisptreeview.normalizePath(path),
                 method: 'GET'
             })
-            .then(thefuseproject.mapData)
+            .then(lisptreeview.mapData)
             .then(function(res) { return res === true; });
         }
         
         function listDir(path) {
             return $http({
-                url: apiRootUrl + '/list-dir/' + thefuseproject.normalizePath(path),
+                url: apiRootUrl + '/list-dir/' + lisptreeview.normalizePath(path),
                 method: 'GET'
             })
-            .then(thefuseproject.mapData);
+            .then(lisptreeview.mapData);
         }
         
         function createListEntries(parent, filenames, autoRefresh) {
@@ -164,11 +164,11 @@ var thefuseproject;
             $rootScope.apiRootUrl = apiRootUrl;
         });
 
-    thefuseproject.mapData = function (promise) {
+    lisptreeview.mapData = function (promise) {
         return promise.data;  
     };
     
-    thefuseproject.normalizePath = function (path) {
+    lisptreeview.normalizePath = function (path) {
         if (!path) {
             path = "#";
         }
@@ -176,4 +176,4 @@ var thefuseproject;
         return encodeURIComponent(path);
     };
 
-})(thefuseproject || (thefuseproject = {}));
+})(lisptreeview || (lisptreeview = {}));
