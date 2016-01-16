@@ -152,7 +152,7 @@ var lisptreeview;
         }; 
     }
     
-    angular.module('thefuseproject', ['ui.bootstrap', 'ngAnimate'])
+    angular.module('lisptreeview', ['ui.bootstrap', 'ngAnimate'])
         .constant("apiRootUrl", "http://benidev.collab.ch:8000/api")
         .controller('AppViewModel', AppViewModel)
         .factory('debounce', DebounceFactory)
