@@ -6,7 +6,7 @@ var thefuseproject;
     function AppViewModel($scope, $http, $timeout, apiRootUrl) {
         var self = this;
         self.rootEntry = new Entry(null, "", function() { return isDir(""); }, function() { return isSymLink(""); });
-        self.rootEntry.refreshing(addMissingChilds, $timeout);
+        self.rootEntry.refreshing(addRemoveChilds, $timeout);
         
         self.expand = function(entry) {
             entry.expanded = true;
@@ -29,8 +29,7 @@ var thefuseproject;
         function isDir(path) {
             return $http({
                 url: apiRootUrl + '/is-dir/' + thefuseproject.normalizePath(path),
-                method: 'GET',
-                timeout: 200
+                method: 'GET'
             })
             .then(thefuseproject.mapData)
             .then(function(res) { return res === true; });
@@ -39,8 +38,7 @@ var thefuseproject;
         function isSymLink(path) {
             return $http({
                 url: apiRootUrl + '/is-sylnk/' + thefuseproject.normalizePath(path),
-                method: 'GET',
-                timeout: 200
+                method: 'GET'
             })
             .then(thefuseproject.mapData)
             .then(function(res) { return res === true; });
@@ -62,7 +60,7 @@ var thefuseproject;
             return filenames.map(function(filename) { 
                 if (autoRefresh) {
                     var entry = new Entry(parent, filename, isDir, isSymLink);
-                    entry.refreshing(addMissingChilds, $timeout);
+                    entry.refreshing(addRemoveChilds, $timeout);
                     return entry;
                 }
                 else {
@@ -71,19 +69,28 @@ var thefuseproject;
             });
         }
         
-        function addMissingChilds(parent) {
-            return;
-            
+        function addRemoveChilds(parent) {
             if (!parent.expanded) {
                 return;
             }
             
             listDir(parent.fullname).then(function(filenames) {
-                createListEntries(parent, filenames, false).forEach(function(childToRefresh) {
-                    var child = parent.entries.filter(function(c) { return c.fullname == childToRefresh.fullname});
+                var childs = parent.entries;
+                var newChilds = createListEntries(parent, filenames, false);
+                
+                childs.forEach(function(child) {
+                    var newChild = newChilds.filter(function(c) { return c.fullname == child.fullname});
+                    if (newChild.length == 0) {
+                        self.collapse(child);
+                        childs.splice(childs.indexOf(child), 1);
+                    }
+                });
+                
+                newChilds.forEach(function(childToRefresh) {
+                    var child = childs.filter(function(c) { return c.fullname == childToRefresh.fullname});
                     if (child.length == 0) {
-                        childToRefresh.refreshing(addMissingChilds, $timeout);
-                        parent.entries.push(childToRefresh);
+                        childToRefresh.refreshing(addRemoveChilds, $timeout);
+                        childs.push(childToRefresh);
                     }
                 });
             });
