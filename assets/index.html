@@ -21,54 +21,12 @@
 </head>
 
 <body ng-controller="AppViewModel as app">
-    <nav class="navbar navbar-default navbar-fixed-top">
-        <div class="container">
-            <div class="navbar-header">
-                <a class="navbar-brand page-scroll" href="#">
-                    <img id="logo" src="img/logo.png">
-                </a>
-                <button type="button" class="btn btn-navbar navbar-toggle"
-                        ng-click="navbarCollapsed = !navbarCollapsed">
-                    <span class="sr-only">Toggle navigation</span>
-                    <span class="icon-bar"></span>
-                    <span class="icon-bar"></span>
-                    <span class="icon-bar"></span>
-                </button>
-            </div>
-            <div class="navbar-right nav-collapse collapse" 
-                 uib-collapse="navbarCollapsed">
-                <p class="navbar-text"
-                   ng-show="app.userAuthenticated">
-                    {{'SignedInAs'}} {{app.userName}}
-                    (<a href="#" ng-click="app.logout()">{{'logout'}}</a>)
-                </p>
-                <ul class="nav navbar-nav">
-                    <li ui-sref-active="active">
-                        <a href ui-sref="overview">{{'overview'}}</a>
-                    </li>
-                    <li ui-sref-active="active"
-                        ng-show="app.userAuthenticated">
-                        <a href ui-sref="basket">{{'basket'}}</a>
-                    </li>
-                    <li ui-sref-active="active"
-                        ng-hide="app.userAuthenticated">
-                        <a href ui-sref="user-register">{{'register'}}</a>
-                    </li>
-                    <li ui-sref-active="active"
-                        ng-hide="app.userAuthenticated">
-                        <a href ui-sref="user-login">{{'login'}}</a>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
-        
     <header>
     </header>
     
     <main ng-cloak>
         <div class="container">
-            <h1>FUSE</h1>
+            <h1>LISP Image Treeview</h1>
             <div ng-repeat="entry in app.rootEntry.entries">
                 <div ng-include="'entry.html'" />
             </div>
