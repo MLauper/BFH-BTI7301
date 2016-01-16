@@ -22,11 +22,13 @@
 
 <body ng-controller="AppViewModel as app">
     <header>
+        <div class="container">
+            <h1>LISP Image Treeview</h1>
+        </div>
     </header>
     
     <main ng-cloak>
         <div class="container">
-            <h1>LISP Image Treeview</h1>
             <div ng-repeat="entry in app.rootEntry.entries">
                 <div ng-include="'entry.html'" />
             </div>
