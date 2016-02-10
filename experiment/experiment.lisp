@@ -11,7 +11,6 @@
 
 (require 'split-sequence)
 
-; http://cl-cookbook.sourceforge.net/hashes.html
 (defparameter *func-outputs* (make-hash-table))
 
 ; test function 1: simply print some values
@@ -29,8 +28,8 @@
 )
 
 ; other silly test functions
-(defun foo (a b &optional c d) (write-to-string (list a b c d)))
-(defun bar (&key a b c) (write-to-string (list a b c)))
+(defun foo (a b &optional c d) (format t "~A~%" (write-to-string (list a b c d))))
+(defun bar (&key a b c) (format t "~A~%" (write-to-string (list a b c))))
 
 ; global variable holding the functions we want to use
 (defvar funcs (list 'prnt 'qgl 'foo 'bar))
@@ -40,99 +39,146 @@
 )
 
 (defun is-directory (split-path)
-	(declare (ignore fh)) ; ?
-	(or
-		(null split-path)
-		(equalp (car split-path) "")
-		(and
-			(equalp (list-length split-path) 1)
-			(find (car split-path) (mapcar 'write-to-string funcs) :test #'equal)
+	(let
+		( (func	(car split-path)) )
+
+		(or
+			(null split-path)
+			(equalp func "")
+			(and
+				(equalp (list-length split-path) 1)
+				(find func (mapcar 'write-to-string funcs) :test #'equal)
+			)
 		)
 	)
 )
 
-(defun symlink-target (split-path)
-	nil
-)
-
 (defun directory-content (split-path)
-	(cond
-		( (or (null split-path) (equalp "" (car split-path)))
-			(mapcar 'write-to-string funcs)
-		)
-		( (find (car split-path) (mapcar 'write-to-string funcs) :test #'equal)
-			(loop
-				for func in funcs
-				when (equalp (car split-path) (write-to-string func))
-				return (list "RUN" "OUTPUT" "PARAMS")
+	(let
+		( (func	(car split-path)) )
+
+		(cond
+			( (or (null split-path) (equalp func ""))
+				(mapcar 'write-to-string funcs)
 			)
+			( (find func (mapcar 'write-to-string funcs) :test #'equal)
+				(loop
+					for f in funcs
+					when (equalp func (write-to-string f))
+					return (list "INVOKE" "PARAMS" "STDOUT" "RETURN")
+				)
+			)
+			(t nil)
 		)
-		(t nil)
 	)
 )
 
 (defun file-size (split-path)
-	; Simply return the length in bytes of the function name. Not very useful, though.
-	;(format t ">>> file-size: ~A~%" split-path)
-	;(cond
-	;	( (equalp (list-length split-path) 1)
-	;		(loop
-	;			for func
-	;			in (mapcar 'write-to-string funcs)
-	;			when (equalp (car split-path) func)
-	;			return (length func)
-	;		)
-	;	)
-	;	(t 0)
-	;)
-	0
+	(let
+		(
+			(func	(car split-path))
+			(action	(cadr split-path))
+		)
+
+		(cond
+			( (equalp action "PARAMS")
+				(loop for f in funcs
+					when (equalp func (write-to-string f))
+					return (+ 1 (length (write-to-string (sb-introspect:function-lambda-list f))))
+				)
+			)
+			( (equalp action "STDOUT")
+				(format t "Read ~A bytes (~A):~%~A~%"
+					(length (gethash func *func-outputs*))
+					func
+					(gethash func *func-outputs*)
+				)
+				(length (gethash func *func-outputs*))
+			)
+			( (equalp action "STDERR")
+				; TODO not implemented
+				0
+			)
+			( (equalp action "RETURN")
+				; TODO not implemented
+				0
+			)
+			(t 0)
+		)
+	)
 )
 
 (defun file-read (split-path size offset fh)
 	(declare (ignore fh))
 	(declare (ignore size))
 	(declare (ignore offset))
-	(format t ">>> file-read: split-path=~A size=~A offset=~A fh=~A~%" split-path size offset fh)
 
-	; TODO test
-	;(list :offset 0 "test")
+	(let
+		(
+			(func	(car split-path))
+			(action	(cadr split-path))
+		)
 
-	(cond
-		( (equalp (cadr split-path) "OUTPUT")
-			;(let* (name (cadr split-path)) `(:offset 0 ,name))
-			;(print (gethash (car split-path) *func-outputs*))
-			(append '(:offset 0) (list (write-to-string funcs)))
+		(format t "[file-read] split-path:~A size:~A offset:~A fh:~A~%" split-path size offset fh)
+
+		(cond
+			( (equalp action "PARAMS")
+				(loop for f in funcs
+					when (equalp func (write-to-string f))
+					return (append
+						'(:offset 0)
+						(list (format nil "~A~%"
+							(write-to-string (sb-introspect:function-lambda-list f))
+						) )
+					)
+				)
+			)
+			( (equalp action "STDOUT")
+				(append '(:offset 0) (list (gethash func *func-outputs*)))
+			)
+			( (equalp action "STDERR")
+				; TODO not implemented
+				nil
+			)
+			( (equalp action "RETURN")
+				; TODO not implemented
+				nil
+			)
+			(t nil)
 		)
-		( (equalp (cadr split-path) "PARAMS")
-			(append '(:offset 0) (write-to-string (mapcar 'write-to-string (sb-introspect:function-lambda-list func))))
-		)
-		(t nil)
 	)
 )
 
 (defun file-write (split-path data offset fh)
-	(format t ">>> file-write: split-path=~A data=\"~A\" offset=~A fh=~A~%"
-		split-path
-		(trim-whitespace (map 'string #'code-char data))
-		offset fh
-	)
-
-	(cond
-		; Only allow input in the file RUN
-		( (equalp (cadr split-path) "RUN")
-			(setf (gethash (car split-path) *func-outputs*)
-				(with-output-to-string (*standard-output*)
-					(eval (read-from-string (concatenate 'string
-						"(" (car split-path) " " (map 'string #'code-char data)  ")"
-					) ) )
-				)
-			)
-
-			(format t "Stored:~%~A~%" (gethash (car split-path) *func-outputs*))
-			t
+	(let
+		(
+			(func	(car split-path))
+			(action	(cadr split-path))
+			(data	(trim-whitespace (map 'string #'code-char data)))
 		)
-		(t nil)
+
+		(format t "[file-write] func:~A data:\"~A\" offset:~A fh:~A~%" func data offset fh)
+
+		(cond
+			( (equalp action "INVOKE")
+				(format t "[INVOKE] (~A ~A)~%" func data)
+				(setf (gethash func *func-outputs*)
+					(with-output-to-string (*standard-output*)
+						(eval (read-from-string (format nil "(~A ~A)" func data)))
+					)
+				)
+
+				(format t "Stored ~A bytes (~A):~%~A~%"
+					(length (gethash func *func-outputs*))
+					func
+					(gethash func *func-outputs*)
+				)
+				t
+			)
+			(t nil)
+		)
 	)
+
 )
 
 (defun fuse-init (mountpoint fsname subtype debug &optional (threaded nil))
@@ -144,9 +190,8 @@
 			)
 			(if debug '("-d") '())
 		)
-		:directoryp		'is-directory 
 		:directory-content	'directory-content
-		:symlink-target		'symlink-target
+		:directoryp		'is-directory
 		:file-size		'file-size
 		:file-read		'file-read
 		:file-write		'file-write
@@ -248,7 +293,7 @@
 )
 
 (main
-	:mountpoint "/tmp/test/"
+	:mountpoint "/tmp/test/" ; must end with a slash
 	:fsname "experiment"
 	:subtype "foo"
 	:debug t
