@@ -11,7 +11,7 @@
 
 (require 'split-sequence)
 
-(defparameter *func-outputs* (make-hash-table))
+(setq *func-outputs* (make-hash-table :test 'equal))
 
 ; test function 1: simply print some values
 (defun prnt (a b c)
@@ -20,10 +20,16 @@
 
 ; test function 2: quadratic equation solver
 (defun qgl (a b c)
-	(format t "Solution for a=~A, b=~A and c=~A:~%x1=~f~%x2=~f~%"
-		a b c
-		(/ (+ (- b) (sqrt (- (* b b) (* 4 a c)))) (* 2 a))
-		(/ (- (- b) (sqrt (- (* b b) (* 4 a c)))) (* 2 a))
+	(let
+		(
+			(x1 (/ (+ (- b) (sqrt (- (* b b) (* 4 a c)))) (* 2 a)))
+			(x2 (/ (- (- b) (sqrt (- (* b b) (* 4 a c)))) (* 2 a)))
+		)
+		(format *error-output* "(-~A + sqrt(~A^2 - 4*~A*~A))/(2*~A) = ~f~%(-~A - sqrt(~A^2 - 4*~A*~A))/(2*~A) = ~f~%"
+			b b a c a x1 b b a c a x2
+		)
+		(format t "Solution for a=~A, b=~A and c=~A:~%x1=~f~%x2=~f~%" a b c x1 x2)
+		(list x1 x2)
 	)
 )
 
@@ -33,10 +39,6 @@
 
 ; global variable holding the functions we want to use
 (defvar funcs (list 'prnt 'qgl 'foo 'bar))
-
-(defun trim-whitespace (string)
-	(string-trim '(#\Space #\Newline #\Backspace #\Tab #\Linefeed #\Page #\Return #\Rubout) string)
-)
 
 (defun is-directory (split-path)
 	(let
@@ -65,7 +67,7 @@
 				(loop
 					for f in funcs
 					when (equalp func (write-to-string f))
-					return (list "INVOKE" "PARAMS" "STDOUT" "RETURN")
+					return (list "INVOKE" "PARAMS" "RETURN" "STDOUT" "STDERR")
 				)
 			)
 			(t nil)
@@ -81,29 +83,23 @@
 		)
 
 		(cond
+			( (equalp action "INVOKE") 0 )
 			( (equalp action "PARAMS")
 				(loop for f in funcs
 					when (equalp func (write-to-string f))
 					return (+ 1 (length (write-to-string (sb-introspect:function-lambda-list f))))
 				)
 			)
+			( (equalp action "RETURN")
+				(+ 1 (length (write-to-string (car (gethash func *func-outputs*)))))
+			)
 			( (equalp action "STDOUT")
-				(format t "Read ~A bytes (~A):~%~A~%"
-					(length (gethash func *func-outputs*))
-					func
-					(gethash func *func-outputs*)
-				)
-				(length (gethash func *func-outputs*))
+				(length (nth 1 (gethash func *func-outputs*)))
 			)
 			( (equalp action "STDERR")
-				; TODO not implemented
-				0
+				(length (nth 2 (gethash func *func-outputs*)))
 			)
-			( (equalp action "RETURN")
-				; TODO not implemented
-				0
-			)
-			(t 0)
+			(t nil)
 		)
 	)
 )
@@ -125,24 +121,25 @@
 			( (equalp action "PARAMS")
 				(loop for f in funcs
 					when (equalp func (write-to-string f))
-					return (append
-						'(:offset 0)
+					return (append '(:offset 0)
 						(list (format nil "~A~%"
 							(write-to-string (sb-introspect:function-lambda-list f))
 						) )
 					)
 				)
 			)
+			( (equalp action "RETURN")
+				(append '(:offset 0)
+					(list (format nil "~A~%"
+						(write-to-string (car (gethash func *func-outputs*)))
+					) )
+				)
+			)
 			( (equalp action "STDOUT")
-				(append '(:offset 0) (list (gethash func *func-outputs*)))
+				(append '(:offset 0) (list (nth 1 (gethash func *func-outputs*))))
 			)
 			( (equalp action "STDERR")
-				; TODO not implemented
-				nil
-			)
-			( (equalp action "RETURN")
-				; TODO not implemented
-				nil
+				(append '(:offset 0) (list (nth 2 (gethash func *func-outputs*))))
 			)
 			(t nil)
 		)
@@ -154,7 +151,11 @@
 		(
 			(func	(car split-path))
 			(action	(cadr split-path))
-			(data	(trim-whitespace (map 'string #'code-char data)))
+			(data	(string-trim
+					'(#\Space #\Newline #\Backspace #\Tab #\Linefeed #\Page #\Return #\Rubout)
+					(map 'string #'code-char data)
+				)
+			)
 		)
 
 		(format t "[file-write] func:~A data:\"~A\" offset:~A fh:~A~%" func data offset fh)
@@ -162,16 +163,29 @@
 		(cond
 			( (equalp action "INVOKE")
 				(format t "[INVOKE] (~A ~A)~%" func data)
-				(setf (gethash func *func-outputs*)
-					(with-output-to-string (*standard-output*)
-						(eval (read-from-string (format nil "(~A ~A)" func data)))
+
+				; capture stdout, stderr and the function's return value in a list
+				; and add it to the *func-outputs* hash table
+				(let
+					(
+						(*standard-output* (make-string-output-stream))
+						(*error-output* (make-string-output-stream))
+					)
+					(setf (gethash func *func-outputs*)
+						(list
+							(eval (read-from-string (format nil "(~A ~A)" func data)))
+							(get-output-stream-string *standard-output*)
+							(get-output-stream-string *error-output*)
+						)
 					)
 				)
 
-				(format t "Stored ~A bytes (~A):~%~A~%"
-					(length (gethash func *func-outputs*))
+				; debugging
+				(format t "Stored output of function '~A':~%return: ~A~%stdout: ~A~%stderr: ~A~%"
 					func
-					(gethash func *func-outputs*)
+					(append '(:offset 0) (list (car (gethash func *func-outputs*))))
+					(append '(:offset 0) (list (nth 1 (gethash func *func-outputs*))))
+					(append '(:offset 0) (list (nth 2 (gethash func *func-outputs*))))
 				)
 				t
 			)
